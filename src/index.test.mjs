@@ -1,10 +1,17 @@
 import { describe, test, expect, vi } from "vitest";
 import { mediatorRequest, mediatorHandler, mediatorBuilder } from "./index";
 
+function catchError(fn) {
+    try {
+        return void fn();
+    } catch (e) {
+        return e;
+    }
+}
+
 async function catchErrorAsync(fn) {
     try {
-        await fn();
-        return undefined;
+        return void (await fn());
     } catch (e) {
         return e;
     }
@@ -106,8 +113,9 @@ describe("@spirex/mediator", () => {
 
         test("WHEN: Add request handler", () => {
             // Arrange ---------
+            var delegate = vi.fn();
             var reqType = mediatorRequest();
-            var handler = mediatorHandler(reqType);
+            var handler = mediatorHandler(reqType, delegate);
             var builder = mediatorBuilder();
 
             // Act -------------
@@ -116,6 +124,31 @@ describe("@spirex/mediator", () => {
             // Assert ----------
             expect(builderRef).toBe(builderRef);
             expect(builder.has(handler)).is.true;
+            expect(delegate).not.toHaveBeenCalled();
+        });
+
+        test("WHEN: Add another handler for same request", () => {
+            // Arrange -----
+            var reqType = mediatorRequest();
+            var delegateA = vi.fn();
+            var handlerA = mediatorHandler(reqType, delegateA);
+            var delegateB = vi.fn();
+            var handlerB = mediatorHandler(reqType, delegateB);
+
+            var builder = mediatorBuilder().add(handlerA);
+
+            // Act ---------
+            var error = catchError(() => {
+                builder.add(handlerB);
+            });
+
+            // Assert ------
+            expect(error).toBeInstanceOf(Error);
+            expect(error.message).toBe(
+                "Another handler for request is already registered",
+            );
+            expect(builder.has(handlerA)).is.true;
+            expect(builder.has(handlerB)).is.false;
         });
 
         test("WHEN: Build mediator", () => {

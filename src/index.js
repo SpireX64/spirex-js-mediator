@@ -15,16 +15,10 @@ export function mediatorHandler(type, handle) {
 }
 
 function createMediator(handlers) {
-    function findHandler(request) {
-        var requestType = request[$Type];
-        for (var handler of handlers) {
-            if (handler.type == requestType) return handler;
-        }
-        throw new Error("Handler not found for the request.");
-    }
-
     function send(request) {
-        var handler = findHandler(request);
+        var requestType = request[$Type];
+        var handler = handlers.find((it) => it.type === requestType);
+        if (!handler) throw new Error("Handler not found for the request.");
         return microtask(() =>
             handler.handle({
                 payload: request.payload,
@@ -32,23 +26,28 @@ function createMediator(handlers) {
         );
     }
 
-    return { send };
+    return Object.freeze({ send });
 }
 
 export function mediatorBuilder() {
-    var handlers = new Set();
+    var handlers = [];
 
     function add(handler) {
-        handlers.add(handler);
+        if (handlers.some((it) => it.type === handler.type)) {
+            throw new Error(
+                "Another handler for request is already registered",
+            );
+        }
+        handlers.push(handler);
         return this;
     }
 
     function has(handler) {
-        return handlers.has(handler);
+        return handlers.includes(handler);
     }
 
     function build() {
-        return createMediator(handlers);
+        return createMediator([...handlers]);
     }
 
     return Object.freeze({ add, has, build });

@@ -85,6 +85,30 @@ describe("@spirex/mediator", () => {
             expect(builder).is.frozen;
         });
 
+        test("WHEN: Check handler was not added", () => {
+            // Arrange ------------
+            var reqType = mediatorRequest();
+            var handler = mediatorHandler(reqType);
+            var builder = mediatorBuilder();
+
+            // Act & Assert -----
+            expect(builder.has(handler)).is.false;
+        });
+
+        test("WHEN: Add request handler", () => {
+            // Arrange ---------
+            var reqType = mediatorRequest();
+            var handler = mediatorHandler(reqType);
+            var builder = mediatorBuilder();
+
+            // Act -------------
+            var builderRef = builder.add(handler);
+
+            // Assert ----------
+            expect(builderRef).toBe(builderRef);
+            expect(builder.has(handler)).is.true;
+        });
+
         test("WHEN: Build mediator", () => {
             // Arrange -----
             var builder = mediatorBuilder();

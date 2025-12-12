@@ -11,8 +11,20 @@ export function mediatorHandler(type, handle) {
 }
 
 export function mediatorBuilder() {
+    var handlers = new Set();
+
+    function add(handler) {
+        handlers.add(handler);
+        return this;
+    }
+
+    function has(handler) {
+        return handlers.has(handler);
+    }
+
     function build() {
         return {};
     }
-    return Object.freeze({ build });
+
+    return Object.freeze({ add, has, build });
 }

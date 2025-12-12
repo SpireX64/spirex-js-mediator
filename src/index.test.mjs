@@ -227,6 +227,34 @@ describe("@spirex/mediator", () => {
                 );
                 expect(result).toBe(payload);
             });
+
+            test("WHEN: send request from handler", async () => {
+                // Arrange -------
+                var expectedResult = 42;
+
+                var requestA = mediatorRequest();
+                var delegateA = vi.fn(() => expectedResult);
+                var handlerA = mediatorHandler(requestA, delegateA);
+
+                var requestB = mediatorRequest();
+                var delegateB = vi.fn(({ mediator }) =>
+                    mediator.send(requestA()),
+                );
+                var handlerB = mediatorHandler(requestB, delegateB);
+
+                var mediator = mediatorBuilder()
+                    .add(handlerA)
+                    .add(handlerB)
+                    .build();
+
+                // Act -----------
+                var result = await mediator.send(requestB());
+
+                // Assert --------
+                expect(result).toBe(expectedResult);
+                expect(delegateA).toHaveBeenCalled();
+                expect(delegateB).toHaveBeenCalled();
+            });
         });
     });
 });

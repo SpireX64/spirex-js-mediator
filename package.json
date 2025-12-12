@@ -6,6 +6,13 @@
   "author": "Artem Sobolenkov",
   "license": "MIT",
   "private": false,
+  "scripts": {
+    "test": "vitest run --config ./vitest.config.mjs",
+    "test:c": "vitest run --config ./vitest.config.mjs --coverage",
+    "build": "rollup --config --environment NODE_ENV:development",
+    "build:release": "rollup --config --environment NODE_ENV:production",
+    "clean": "rimraf dist coverage"
+  },
   "devDependencies": {
     "@eslint/js": "9.25.1",
     "@rollup/plugin-node-resolve": "16.0.1",

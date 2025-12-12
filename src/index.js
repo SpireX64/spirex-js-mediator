@@ -5,3 +5,7 @@ export function mediatorRequest() {
         return Object.freeze({ [$Request]: request, payload });
     };
 }
+
+export function mediatorHandler(type, handle) {
+    return Object.freeze({ type, handle })
+}

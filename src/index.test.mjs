@@ -1,5 +1,5 @@
-import { describe, test, expect } from "vitest";
-import { mediatorRequest } from "./index";
+import { describe, test, expect, vi } from "vitest";
+import { mediatorRequest, mediatorHandler } from "./index";
 
 describe("@spirex/mediator", () => {
     describe("Request", () => {
@@ -54,6 +54,24 @@ describe("@spirex/mediator", () => {
             expect(req).toBeInstanceOf(Object);
             expect(req).is.frozen;
             expect(payload).toBe(payload);
-        })
+        });
+    });
+
+    describe("Request Handler", () => {
+        test("WHEN: Define request handler", () => {
+            // Arrange -------
+            var reqType = mediatorRequest();
+            var delegate = vi.fn();
+
+            // Act -----------
+            var handler = mediatorHandler(reqType, delegate);
+
+            // Assert --------
+            expect(handler).toBeInstanceOf(Object);
+            expect(handler).is.frozen;
+            expect(handler.type).toBe(reqType);
+            expect(handler.handle).toBe(delegate);
+            expect(delegate).not.toHaveBeenCalled();
+        });
     });
 });

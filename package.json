@@ -1,7 +1,7 @@
 {
   "name": "@spirex/mediator",
   "version": "0.0.1",
-  "description": "Intuitive and fully typed Mediator library for JS/TS, enabling clean, modular, and testable architecture with minimal boilerplate.",
+  "description": "Lightweight and fully typed Mediator library for JS/TS, enabling clean, modular, and testable architecture with minimal boilerplate.",
   "main": "dist/index.js",
   "author": "Artem Sobolenkov",
   "license": "MIT",

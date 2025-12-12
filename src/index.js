@@ -21,6 +21,7 @@ function createMediator(handlers) {
         if (!handler) throw new Error("Handler not found for the request.");
         return microtask(() =>
             handler.handle({
+                mediator: this,
                 payload: request.payload,
             }),
         );

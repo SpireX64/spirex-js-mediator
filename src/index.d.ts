@@ -21,6 +21,7 @@ export declare function mediatorRequest<
 
 export type IMediatorRequestContext<Payload> = Readonly<{
     payload: Payload;
+    mediator: IMediator;
 }>;
 
 export type TMediatorRequestHandlerDelegate<Result, Payload> = (

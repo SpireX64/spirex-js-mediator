@@ -182,7 +182,7 @@ describe("@spirex/mediator", () => {
 
                 // Assert -------
                 expect(delegate).toHaveBeenCalledWith(
-                    expect.objectContaining({ payload }),
+                    expect.objectContaining({ payload, mediator }),
                 );
                 expect(result.value).toBe(payload);
             });
@@ -223,7 +223,7 @@ describe("@spirex/mediator", () => {
                 // Assert ---------
                 expect(reqADelegate).not.toHaveBeenCalled();
                 expect(reqBDelegate).toHaveBeenCalledWith(
-                    expect.objectContaining({ payload }),
+                    expect.objectContaining({ payload, mediator }),
                 );
                 expect(result).toBe(payload);
             });

@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from "vitest";
-import { mediatorRequest, mediatorHandler } from "./index";
+import { mediatorRequest, mediatorHandler, mediatorBuilder } from "./index";
 
 describe("@spirex/mediator", () => {
     describe("Request", () => {
@@ -72,6 +72,28 @@ describe("@spirex/mediator", () => {
             expect(handler.type).toBe(reqType);
             expect(handler.handle).toBe(delegate);
             expect(delegate).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("Mediator Builder", () => {
+        test("WHEN: Create builder instance", () => {
+            // Act ---------
+            var builder = mediatorBuilder();
+
+            // Assert ------
+            expect(builder).toBeInstanceOf(Object);
+            expect(builder).is.frozen;
+        });
+
+        test("WHEN: Build mediator", () => {
+            // Arrange -----
+            var builder = mediatorBuilder();
+
+            // Act ---------
+            var mediator = builder.build();
+
+            // Assert ------
+            expect(mediator).toBeInstanceOf(Object);
         });
     });
 });

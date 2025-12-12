@@ -7,5 +7,12 @@ export function mediatorRequest() {
 }
 
 export function mediatorHandler(type, handle) {
-    return Object.freeze({ type, handle })
+    return Object.freeze({ type, handle });
+}
+
+export function mediatorBuilder() {
+    function build() {
+        return {};
+    }
+    return Object.freeze({ build });
 }

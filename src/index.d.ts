@@ -1,3 +1,7 @@
+// =========================
+// REQUESTS
+// =========================
+
 export type TMediatorRequest<Result, Payload = undefined> = Readonly<{
     [Symbol.species]?: Result
     payload: Payload;
@@ -31,3 +35,16 @@ export declare function mediatorHandler<Result, Payload>(
     requestType: TMediatorRequestType<Result, Payload>,
     delegate: TMediatorRequestHandlerDelegate<Result, Payload>,
 ): TMediatorRequestHandler<Result, Payload>;
+
+
+// ==============================
+// MEDIATOR
+// ==============================
+
+export interface IMediator {}
+
+export interface IMediatorBuilder {
+    build(): IMediator
+}
+
+export function mediatorBuilder(): IMediatorBuilder

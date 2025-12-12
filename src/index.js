@@ -15,12 +15,13 @@ export function mediatorHandler(type, handle) {
 }
 
 function createMediator(handlers) {
-    function send(request) {
+    function send(request, abortSignal) {
         var requestType = request[$Type];
         var handler = handlers.find((it) => it.type === requestType);
         if (!handler) throw new Error("Handler not found for the request.");
         return microtask(() =>
             handler.handle({
+                abortSignal,
                 mediator: this,
                 payload: request.payload,
             }),

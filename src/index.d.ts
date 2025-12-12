@@ -22,6 +22,7 @@ export declare function mediatorRequest<
 export type IMediatorRequestContext<Payload> = Readonly<{
     payload: Payload;
     mediator: IMediator;
+    abortSignal?: AbortSignal;
 }>;
 
 export type TMediatorRequestHandlerDelegate<Result, Payload> = (
@@ -43,7 +44,10 @@ export declare function mediatorHandler<Result, Payload>(
 // ==============================
 
 export interface IMediator {
-    send<T>(request: TMediatorRequest<T, any>): Promise<T>;
+    send<T>(
+        request: TMediatorRequest<T, any>,
+        abortSignal?: AbortSignal,
+    ): Promise<T>;
 }
 
 export interface IMediatorBuilder {

@@ -255,6 +255,37 @@ describe("@spirex/mediator", () => {
                 expect(delegateA).toHaveBeenCalled();
                 expect(delegateB).toHaveBeenCalled();
             });
+
+            test("WHEN: Abort request by signal", async () => {
+                // Arrange ----------
+                var abortedResult = "aborted";
+
+                var purchaseRequest = mediatorRequest();
+                var purchaseRequestHandler = mediatorHandler(
+                    purchaseRequest,
+                    ({ abortSignal }) =>
+                        abortSignal.aborted ? abortedResult : "purchased",
+                );
+
+                var mediator = mediatorBuilder()
+                    .add(purchaseRequestHandler)
+                    .build();
+
+                var abortCtrl = new AbortController();
+
+                // Act ---------
+                var promise = mediator.send(
+                    purchaseRequest(),
+                    abortCtrl.signal,
+                );
+
+                abortCtrl.abort();
+
+                var result = await promise;
+
+                // Assert ------
+                expect(result).toBe(abortedResult);
+            });
         });
     });
 });

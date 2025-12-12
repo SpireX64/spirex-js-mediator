@@ -41,7 +41,9 @@ export declare function mediatorHandler<Result, Payload>(
 // MEDIATOR
 // ==============================
 
-export interface IMediator {}
+export interface IMediator {
+    send<T>(request: TMediatorRequest<T, any>): Promise<T>;
+}
 
 export interface IMediatorBuilder {
     add(handler: TMediatorRequestHandler<any, any>): this;

@@ -1,8 +1,17 @@
 import { describe, test, expect, vi } from "vitest";
 import { mediatorRequest, mediatorHandler, mediatorBuilder } from "./index";
 
+async function catchErrorAsync(fn) {
+    try {
+        await fn();
+        return undefined;
+    } catch (e) {
+        return e;
+    }
+}
+
 describe("@spirex/mediator", () => {
-    describe("Request", () => {
+    describe("Request definition", () => {
         test("WHEN: Define request type", () => {
             // Act ---------
             var reqType = mediatorRequest();
@@ -118,6 +127,73 @@ describe("@spirex/mediator", () => {
 
             // Assert ------
             expect(mediator).toBeInstanceOf(Object);
+        });
+    });
+
+    describe("Mediator", () => {
+        describe("Requests", () => {
+            test("WHEN: send request", async () => {
+                // Arrange ------
+                var createTask = mediatorRequest();
+
+                var payload = "foo";
+                var delegate = vi.fn(({ payload }) => ({ value: payload }));
+                var createTaskHandler = mediatorHandler(createTask, delegate);
+
+                var mediator = mediatorBuilder().add(createTaskHandler).build();
+
+                var req = createTask(payload);
+
+                // Act ----------
+                var result = await mediator.send(req);
+
+                // Assert -------
+                expect(delegate).toHaveBeenCalledWith(
+                    expect.objectContaining({ payload }),
+                );
+                expect(result.value).toBe(payload);
+            });
+
+            test("WHEN: send unsupported request", async () => {
+                // Arrange -----
+                var reqType = mediatorRequest();
+                var mediator = mediatorBuilder().build();
+
+                // Act ---------
+                var err = await catchErrorAsync(() => mediator.send(reqType));
+
+                // Assert ------
+                expect(err).toBeInstanceOf(Error);
+                expect(err.message).toBe("Handler not found for the request.");
+            });
+
+            test("WHEN: send request, but Mediator has many handlers", async () => {
+                // Arrange --------
+                var reqTypeA = mediatorRequest();
+                var reqADelegate = vi.fn(({ payload }) => payload);
+                var reqHandlerA = mediatorHandler(reqTypeA, reqADelegate);
+
+                var reqTypeB = mediatorRequest();
+                var reqBDelegate = vi.fn(({ payload }) => payload);
+                var reqHandlerB = mediatorHandler(reqTypeB, reqBDelegate);
+
+                var payload = 42;
+
+                var mediator = mediatorBuilder()
+                    .add(reqHandlerA)
+                    .add(reqHandlerB)
+                    .build();
+
+                // Act ------------
+                var result = await mediator.send(reqTypeB(payload));
+
+                // Assert ---------
+                expect(reqADelegate).not.toHaveBeenCalled();
+                expect(reqBDelegate).toHaveBeenCalledWith(
+                    expect.objectContaining({ payload }),
+                );
+                expect(result).toBe(payload);
+            });
         });
     });
 });

@@ -3,7 +3,7 @@
 // =========================
 
 export type TMediatorRequest<Result, Payload = undefined> = Readonly<{
-    [Symbol.species]?: Result
+    [Symbol.species]?: Result;
     payload: Payload;
 }>;
 
@@ -21,21 +21,21 @@ export declare function mediatorRequest<
 
 export type IMediatorRequestContext<Payload> = Readonly<{
     payload: Payload;
-}>
+}>;
 
-export type TMediatorRequestHandlerDelegate<Result, Payload> =
-    (context: IMediatorRequestContext<Payload>) => Result | Promise<Result>
+export type TMediatorRequestHandlerDelegate<Result, Payload> = (
+    context: IMediatorRequestContext<Payload>,
+) => Result | Promise<Result>;
 
 export type TMediatorRequestHandler<Result, Payload> = Readonly<{
     type: TMediatorRequestType<Result, Payload>;
     handle: TMediatorRequestHandlerDelegate<Result, Payload>;
-}>
+}>;
 
 export declare function mediatorHandler<Result, Payload>(
     requestType: TMediatorRequestType<Result, Payload>,
     delegate: TMediatorRequestHandlerDelegate<Result, Payload>,
 ): TMediatorRequestHandler<Result, Payload>;
-
 
 // ==============================
 // MEDIATOR
@@ -44,7 +44,9 @@ export declare function mediatorHandler<Result, Payload>(
 export interface IMediator {}
 
 export interface IMediatorBuilder {
-    build(): IMediator
+    add(handler: TMediatorRequestHandler<any, any>): this;
+    has(handler: TMediatorRequestHandler<any, any>): boolean;
+    build(): IMediator;
 }
 
-export function mediatorBuilder(): IMediatorBuilder
+export function mediatorBuilder(): IMediatorBuilder;

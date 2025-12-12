@@ -40,6 +40,22 @@ export declare function mediatorHandler<Result, Payload>(
 ): TMediatorRequestHandler<Result, Payload>;
 
 // ==============================
+// EVENTS
+// ==============================
+
+export type TMediatorEvent<Payload = undefined> = Readonly<{
+    payload: Payload;
+}>;
+
+export type TMediatorEventType<Payload = undefined> = Payload extends undefined
+    ? () => TMediatorEvent
+    : (payload: Payload) => TMediatorEvent<Payload>;
+
+export declare function mediatorEvent<
+    Payload = undefined,
+>(): TMediatorEventType<Payload>;
+
+// ==============================
 // MEDIATOR
 // ==============================
 

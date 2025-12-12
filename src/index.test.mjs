@@ -1,5 +1,10 @@
 import { describe, test, expect, vi } from "vitest";
-import { mediatorRequest, mediatorHandler, mediatorBuilder } from "./index";
+import {
+    mediatorRequest,
+    mediatorHandler,
+    mediatorBuilder,
+    mediatorEvent,
+} from "./index";
 
 function catchError(fn) {
     try {
@@ -88,6 +93,43 @@ describe("@spirex/mediator", () => {
             expect(handler.type).toBe(reqType);
             expect(handler.handle).toBe(delegate);
             expect(delegate).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("Event definition", () => {
+        test("WHEN: Define event type", () => {
+            // Act ---------
+            var eventType = mediatorEvent();
+
+            // Assert ------
+            expect(eventType).toBeInstanceOf(Function);
+        });
+
+        test("WHEN: Create event instance", () => {
+            // Arrange ------
+            var eventType = mediatorEvent();
+
+            // Act ----------
+            var ev = eventType();
+
+            // Assert ------
+            expect(ev).toBeInstanceOf(Object);
+            expect(ev).is.frozen;
+            expect(ev.payload).is.undefined;
+        });
+
+        test("WHEN: Create event instance with payload", () => {
+            // Arrange ------
+            var payload = 42;
+            var eventType = mediatorEvent();
+
+            // Act ----------
+            var ev = eventType(payload);
+
+            // Assert -------
+            expect(ev).toBeInstanceOf(Object);
+            expect(ev).is.frozen;
+            expect(ev.payload).toBe(payload);
         });
     });
 

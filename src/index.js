@@ -1,3 +1,4 @@
+const $Kind = Symbol();
 const $Type = Symbol();
 
 function microtask(fn) {
@@ -5,8 +6,14 @@ function microtask(fn) {
 }
 
 export function mediatorRequest() {
-    return function request(payload) {
-        return Object.freeze({ [$Type]: request, payload });
+    return function Request(payload) {
+        return Object.freeze({ [$Kind]: "r", [$Type]: Request, payload });
+    };
+}
+
+export function mediatorEvent() {
+    return function Event(payload) {
+        return Object.freeze({ [$Kind]: "e", [$Type]: Event, payload });
     };
 }
 

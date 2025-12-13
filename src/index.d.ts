@@ -58,6 +58,7 @@ export declare function defineEvent<
 export type TMediatorEventContext<Payload> = Readonly<{
     type: TMediatorEventType<Payload>;
     payload: Payload;
+    mediator: IMediator;
 }>;
 
 export type TMediatorEventListener<Payload> = (
@@ -65,6 +66,11 @@ export type TMediatorEventListener<Payload> = (
 ) => void | Promise<void>;
 
 export type TMediatorEventListenerDispose = () => void;
+
+export type TMediatorEventErrorHandler = (
+    error: unknown,
+    context: TMediatorEventContext<unknown>,
+) => void | Promise<void>;
 
 // ==============================
 // MEDIATOR
@@ -88,8 +94,9 @@ export interface IMediator {
 }
 
 export interface IMediatorBuilder {
-    add(handler: TMediatorRequestHandler<any, any>): this;
     has(handler: TMediatorRequestHandler<any, any>): boolean;
+    add(handler: TMediatorRequestHandler<any, any>): this;
+    onEventError(errorHandler: TMediatorEventErrorHandler): this;
     build(): IMediator;
 }
 

@@ -476,6 +476,69 @@ describe("@spirex/mediator", () => {
                     "Invalid event listener. Expected a function.",
                 );
             });
+
+            test("WHEN: Listener throws error", () => {
+                // Arrange ---------
+                var eventType = defineEvent();
+                var mediator = mediatorBuilder().build();
+
+                mediator.on(eventType, () => {
+                    throw new Error("Test Error");
+                });
+
+                var listener = vi.fn();
+                mediator.on(eventType, listener);
+
+                // Act -------------
+                var error = catchError(() => mediator.publish(eventType()));
+
+                // Assert ----------
+                expect(error).is.undefined;
+                expect(listener).toHaveBeenCalled();
+            });
+
+            test("WHEN: Catch listener error", () => {
+                // Arrange ---------
+                var payload = 42;
+                var eventType = defineEvent();
+                var eventErrorHandler = vi.fn();
+
+                var mediator = mediatorBuilder()
+                    .onEventError(eventErrorHandler)
+                    .build();
+                var expectedError = new Error("Test Error");
+
+                mediator.on(eventType, () => {
+                    throw expectedError;
+                });
+
+                // Act -------------
+                mediator.publish(eventType(payload));
+
+                // Assert ----------
+                expect(eventErrorHandler).toHaveBeenCalledWith(
+                    expectedError,
+                    expect.objectContaining({
+                        type: eventType,
+                        mediator,
+                        payload,
+                    }),
+                );
+            });
+
+            test("WHEN: Pass non-function value as error handler", () => {
+                // Arrange --------
+                var builder = mediatorBuilder()
+
+                // Act ------------
+                var error = catchError(() => {
+                    builder.onEventError({ foo: 'bar' })
+                })
+
+                // Assert ---------
+                expect(error).toBeInstanceOf(TypeError);
+                expect(error.message).toEqual("Invalid error handler. Expected a function.")
+            })
         });
     });
 });

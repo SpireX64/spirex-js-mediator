@@ -363,7 +363,7 @@ describe("@spirex/mediator", () => {
                 expect(dispose).toBeInstanceOf(Function);
             });
 
-            test("WHEN: Publish event", () => {
+            test("WHEN: Publish event", async () => {
                 // Arrange ------
                 var eventType = defineEvent();
                 var payload = 42;
@@ -375,6 +375,9 @@ describe("@spirex/mediator", () => {
                 // Act ----------
                 mediator.publish(eventType(42));
 
+                // Wait for microtask completion
+                await Promise.resolve();
+
                 // Assert -------
                 expect(listener).toHaveBeenCalledWith(
                     expect.objectContaining({
@@ -385,7 +388,26 @@ describe("@spirex/mediator", () => {
                 );
             });
 
-            test("WHEN: Publish with many listeners", () => {
+            test("WHEN: Publish event without listeners", () => {
+                // Arrange --------
+                var eventType = defineEvent();
+                var anotherEventType = defineEvent();
+                var mediator = mediatorBuilder().build();
+
+                var listener = vi.fn();
+                mediator.on(anotherEventType, listener);
+
+                // Act ------------
+                var error = catchError(() => {
+                    mediator.publish(eventType());
+                });
+
+                // Assert ---------
+                expect(error).is.undefined;
+                expect(listener).not.toHaveBeenCalled();
+            });
+
+            test("WHEN: Publish with many listeners", async () => {
                 // Arrange --------
                 var eventType = defineEvent();
                 var payload = "foo";
@@ -400,6 +422,9 @@ describe("@spirex/mediator", () => {
 
                 // Act ------------
                 mediator.publish(eventType(payload));
+
+                // Wait for microtask completion
+                await Promise.resolve();
 
                 // Assert ---------
                 expect(listenerA).toHaveBeenCalledWith(
@@ -418,7 +443,7 @@ describe("@spirex/mediator", () => {
                 );
             });
 
-            test("WHEN: Subscribe for one event", () => {
+            test("WHEN: Subscribe for one event", async () => {
                 // Arrange --------
                 var eventType = defineEvent();
                 var payloadA = "foo";
@@ -433,11 +458,20 @@ describe("@spirex/mediator", () => {
                 mediator.publish(eventType(payloadA));
                 mediator.publish(eventType(payloadB));
 
+                // Wait for microtask completion
+                await Promise.resolve();
+
                 // Assert ---------
-                expect(listener).toHaveBeenCalledOnce({ payload: payloadA });
+                expect(listener).toHaveBeenCalledExactlyOnceWith(
+                    expect.objectContaining({
+                        type: eventType,
+                        payload: payloadA,
+                        mediator,
+                    }),
+                );
             });
 
-            test("WHEN: Dispose listener", () => {
+            test("WHEN: Dispose listener", async () => {
                 // Arrange -------
                 var eventType = defineEvent();
                 var payload = 42;
@@ -452,6 +486,9 @@ describe("@spirex/mediator", () => {
                 // Act -----------
                 disposeEvent();
                 mediator.publish(eventType(payload));
+
+                // Wait for microtask completion
+                await Promise.resolve();
 
                 // Assert --------
                 expect(listener).not.toHaveBeenCalled();
@@ -493,7 +530,7 @@ describe("@spirex/mediator", () => {
                 );
             });
 
-            test("WHEN: Listener throws error", () => {
+            test("WHEN: Listener throws error", async () => {
                 // Arrange ---------
                 var eventType = defineEvent();
                 var mediator = mediatorBuilder().build();
@@ -508,12 +545,15 @@ describe("@spirex/mediator", () => {
                 // Act -------------
                 var error = catchError(() => mediator.publish(eventType()));
 
+                // Wait for microtask completion
+                await Promise.resolve();
+
                 // Assert ----------
                 expect(error).is.undefined;
                 expect(listener).toHaveBeenCalled();
             });
 
-            test("WHEN: Catch listener error", () => {
+            test("WHEN: Catch listener error", async () => {
                 // Arrange ---------
                 var payload = 42;
                 var eventType = defineEvent();
@@ -530,6 +570,9 @@ describe("@spirex/mediator", () => {
 
                 // Act -------------
                 mediator.publish(eventType(payload));
+
+                // Wait for microtask completion
+                await Promise.resolve();
 
                 // Assert ----------
                 expect(eventErrorHandler).toHaveBeenCalledWith(

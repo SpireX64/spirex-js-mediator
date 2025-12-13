@@ -62,13 +62,15 @@ function createMediator(handlers, onEventError) {
             mediator,
         });
 
-        for (var listener of listeners) {
-            try {
-                listener(context);
-            } catch (e) {
-                onEventError && onEventError(e, context);
-            }
-        }
+        listeners.forEach((listener) => {
+            runMicrotask(() => {
+                try {
+                    listener(context);
+                } catch (e) {
+                    onEventError && onEventError(e, context);
+                }
+            });
+        });
     }
 
     function on(eventType, listener) {
@@ -81,8 +83,9 @@ function createMediator(handlers, onEventError) {
         listeners.add(listener);
 
         return () => {
-            listeners.delete(listener);
+            var wasDisposed = listeners.delete(listener);
             if (listeners.size == 0) eventListenersMap.delete(eventType);
+            return wasDisposed;
         };
     }
 
@@ -90,8 +93,7 @@ function createMediator(handlers, onEventError) {
         var dispose = on(eventType, (context) => {
             // Call dispose first, otherwise it won't work
             // if the listener throws an error.
-            dispose();
-            listener(context);
+            dispose() && listener(context);
         });
         return dispose;
     }

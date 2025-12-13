@@ -1,9 +1,9 @@
 import { describe, test, expect, vi } from "vitest";
 import {
-    mediatorRequest,
-    mediatorHandler,
+    defineRequest,
+    createHandler,
+    defineEvent,
     mediatorBuilder,
-    mediatorEvent,
 } from "./index";
 
 function catchError(fn) {
@@ -26,7 +26,7 @@ describe("@spirex/mediator", () => {
     describe("Request definition", () => {
         test("WHEN: Define request type", () => {
             // Act ---------
-            var reqType = mediatorRequest();
+            var reqType = defineRequest();
 
             // Assert ------
             expect(reqType).toBeDefined();
@@ -35,7 +35,7 @@ describe("@spirex/mediator", () => {
 
         test("WHEN: Create request", () => {
             // Arrange -----
-            var reqType = mediatorRequest();
+            var reqType = defineRequest();
 
             // Act ---------
             var req = reqType();
@@ -49,7 +49,7 @@ describe("@spirex/mediator", () => {
 
         test("WHEN: Create request with object payload", () => {
             // Arrange -----
-            var reqType = mediatorRequest();
+            var reqType = defineRequest();
             var payload = { value: 42 };
 
             // Act ---------
@@ -64,7 +64,7 @@ describe("@spirex/mediator", () => {
 
         test("WHEN: Create request with primitive payload", () => {
             // Arrange -----
-            var reqType = mediatorRequest();
+            var reqType = defineRequest();
             var payload = 42;
 
             // Act --------
@@ -81,11 +81,11 @@ describe("@spirex/mediator", () => {
     describe("Request Handler", () => {
         test("WHEN: Define request handler", () => {
             // Arrange -------
-            var reqType = mediatorRequest();
+            var reqType = defineRequest();
             var delegate = vi.fn();
 
             // Act -----------
-            var handler = mediatorHandler(reqType, delegate);
+            var handler = createHandler(reqType, delegate);
 
             // Assert --------
             expect(handler).toBeInstanceOf(Object);
@@ -99,7 +99,7 @@ describe("@spirex/mediator", () => {
     describe("Event definition", () => {
         test("WHEN: Define event type", () => {
             // Act ---------
-            var eventType = mediatorEvent();
+            var eventType = defineEvent();
 
             // Assert ------
             expect(eventType).toBeInstanceOf(Function);
@@ -107,7 +107,7 @@ describe("@spirex/mediator", () => {
 
         test("WHEN: Create event instance", () => {
             // Arrange ------
-            var eventType = mediatorEvent();
+            var eventType = defineEvent();
 
             // Act ----------
             var ev = eventType();
@@ -121,7 +121,7 @@ describe("@spirex/mediator", () => {
         test("WHEN: Create event instance with payload", () => {
             // Arrange ------
             var payload = 42;
-            var eventType = mediatorEvent();
+            var eventType = defineEvent();
 
             // Act ----------
             var ev = eventType(payload);
@@ -145,8 +145,8 @@ describe("@spirex/mediator", () => {
 
         test("WHEN: Check handler was not added", () => {
             // Arrange ------------
-            var reqType = mediatorRequest();
-            var handler = mediatorHandler(reqType);
+            var reqType = defineRequest();
+            var handler = createHandler(reqType);
             var builder = mediatorBuilder();
 
             // Act & Assert -----
@@ -156,8 +156,8 @@ describe("@spirex/mediator", () => {
         test("WHEN: Add request handler", () => {
             // Arrange ---------
             var delegate = vi.fn();
-            var reqType = mediatorRequest();
-            var handler = mediatorHandler(reqType, delegate);
+            var reqType = defineRequest();
+            var handler = createHandler(reqType, delegate);
             var builder = mediatorBuilder();
 
             // Act -------------
@@ -171,11 +171,11 @@ describe("@spirex/mediator", () => {
 
         test("WHEN: Add another handler for same request", () => {
             // Arrange -----
-            var reqType = mediatorRequest();
+            var reqType = defineRequest();
             var delegateA = vi.fn();
-            var handlerA = mediatorHandler(reqType, delegateA);
+            var handlerA = createHandler(reqType, delegateA);
             var delegateB = vi.fn();
-            var handlerB = mediatorHandler(reqType, delegateB);
+            var handlerB = createHandler(reqType, delegateB);
 
             var builder = mediatorBuilder().add(handlerA);
 
@@ -209,11 +209,11 @@ describe("@spirex/mediator", () => {
         describe("Requests", () => {
             test("WHEN: send request", async () => {
                 // Arrange ------
-                var createTask = mediatorRequest();
+                var createTask = defineRequest();
 
                 var payload = "foo";
                 var delegate = vi.fn(({ payload }) => ({ value: payload }));
-                var createTaskHandler = mediatorHandler(createTask, delegate);
+                var createTaskHandler = createHandler(createTask, delegate);
 
                 var mediator = mediatorBuilder().add(createTaskHandler).build();
 
@@ -231,7 +231,7 @@ describe("@spirex/mediator", () => {
 
             test("WHEN: send unsupported request", async () => {
                 // Arrange -----
-                var reqType = mediatorRequest();
+                var reqType = defineRequest();
                 var mediator = mediatorBuilder().build();
 
                 // Act ---------
@@ -262,13 +262,13 @@ describe("@spirex/mediator", () => {
 
             test("WHEN: send request, but Mediator has many handlers", async () => {
                 // Arrange --------
-                var reqTypeA = mediatorRequest();
+                var reqTypeA = defineRequest();
                 var reqADelegate = vi.fn(({ payload }) => payload);
-                var reqHandlerA = mediatorHandler(reqTypeA, reqADelegate);
+                var reqHandlerA = createHandler(reqTypeA, reqADelegate);
 
-                var reqTypeB = mediatorRequest();
+                var reqTypeB = defineRequest();
                 var reqBDelegate = vi.fn(({ payload }) => payload);
-                var reqHandlerB = mediatorHandler(reqTypeB, reqBDelegate);
+                var reqHandlerB = createHandler(reqTypeB, reqBDelegate);
 
                 var payload = 42;
 
@@ -292,15 +292,15 @@ describe("@spirex/mediator", () => {
                 // Arrange -------
                 var expectedResult = 42;
 
-                var requestA = mediatorRequest();
+                var requestA = defineRequest();
                 var delegateA = vi.fn(() => expectedResult);
-                var handlerA = mediatorHandler(requestA, delegateA);
+                var handlerA = createHandler(requestA, delegateA);
 
-                var requestB = mediatorRequest();
+                var requestB = defineRequest();
                 var delegateB = vi.fn(({ mediator }) =>
                     mediator.send(requestA()),
                 );
-                var handlerB = mediatorHandler(requestB, delegateB);
+                var handlerB = createHandler(requestB, delegateB);
 
                 var mediator = mediatorBuilder()
                     .add(handlerA)
@@ -320,8 +320,8 @@ describe("@spirex/mediator", () => {
                 // Arrange ----------
                 var abortedResult = "aborted";
 
-                var purchaseRequest = mediatorRequest();
-                var purchaseRequestHandler = mediatorHandler(
+                var purchaseRequest = defineRequest();
+                var purchaseRequestHandler = createHandler(
                     purchaseRequest,
                     ({ abortSignal }) =>
                         abortSignal.aborted ? abortedResult : "purchased",
@@ -351,7 +351,7 @@ describe("@spirex/mediator", () => {
         describe("Events", () => {
             test("WHEN: Add event listener", () => {
                 // Arrange ------
-                var eventType = mediatorEvent();
+                var eventType = defineEvent();
                 var mediator = mediatorBuilder().build();
                 var listener = vi.fn();
 
@@ -365,7 +365,7 @@ describe("@spirex/mediator", () => {
 
             test("WHEN: Publish event", () => {
                 // Arrange ------
-                var eventType = mediatorEvent();
+                var eventType = defineEvent();
                 var payload = 42;
                 var mediator = mediatorBuilder().build();
 
@@ -383,7 +383,7 @@ describe("@spirex/mediator", () => {
 
             test("WHEN: Publish with many listeners", () => {
                 // Arrange --------
-                var eventType = mediatorEvent();
+                var eventType = defineEvent();
                 var payload = "foo";
 
                 var mediator = mediatorBuilder().build();
@@ -408,7 +408,7 @@ describe("@spirex/mediator", () => {
 
             test("WHEN: Subscribe for one event", () => {
                 // Arrange --------
-                var eventType = mediatorEvent();
+                var eventType = defineEvent();
                 var payloadA = "foo";
                 var payloadB = "bar";
 
@@ -427,7 +427,7 @@ describe("@spirex/mediator", () => {
 
             test("WHEN: Dispose listener", () => {
                 // Arrange -------
-                var eventType = mediatorEvent();
+                var eventType = defineEvent();
                 var payload = 42;
                 var mediator = mediatorBuilder().build();
 
@@ -464,7 +464,7 @@ describe("@spirex/mediator", () => {
 
             test("WHEN: pass non-function value as event listener", () => {
                 // Arrange --------
-                var eventType = mediatorEvent();
+                var eventType = defineEvent();
                 var mediator = mediatorBuilder().build();
 
                 // Act ------------

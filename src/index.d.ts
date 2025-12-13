@@ -14,7 +14,7 @@ export type TMediatorRequestType<
     ? () => TMediatorRequest<Result>
     : (payload: Payload) => TMediatorRequest<Result, Payload>;
 
-export declare function mediatorRequest<
+export declare function defineRequest<
     Result,
     Payload = undefined,
 >(): TMediatorRequestType<Result, Payload>;
@@ -34,7 +34,7 @@ export type TMediatorRequestHandler<Result, Payload> = Readonly<{
     handle: TMediatorRequestHandlerDelegate<Result, Payload>;
 }>;
 
-export declare function mediatorHandler<Result, Payload>(
+export declare function createHandler<Result, Payload>(
     requestType: TMediatorRequestType<Result, Payload>,
     delegate: TMediatorRequestHandlerDelegate<Result, Payload>,
 ): TMediatorRequestHandler<Result, Payload>;
@@ -51,7 +51,7 @@ export type TMediatorEventType<Payload = undefined> = Payload extends undefined
     ? () => TMediatorEvent
     : (payload: Payload) => TMediatorEvent<Payload>;
 
-export declare function mediatorEvent<
+export declare function defineEvent<
     Payload = undefined,
 >(): TMediatorEventType<Payload>;
 

@@ -1,3 +1,5 @@
+/// <reference path="./index.d.ts" />
+
 const $Kind = Symbol();
 const $Type = Symbol();
 
@@ -5,19 +7,19 @@ function runMicrotask(fn) {
     return Promise.resolve().then(fn);
 }
 
-export function mediatorRequest() {
+export function defineRequest() {
     return function Request(payload) {
         return Object.freeze({ [$Kind]: "r", [$Type]: Request, payload });
     };
 }
 
-export function mediatorEvent() {
+export function defineEvent() {
     return function Event(payload) {
         return Object.freeze({ [$Kind]: "e", [$Type]: Event, payload });
     };
 }
 
-export function mediatorHandler(type, handle) {
+export function createHandler(type, handle) {
     return Object.freeze({ type, handle });
 }
 

@@ -94,8 +94,7 @@ export interface IMediator {
 }
 
 export interface IMediatorBuilder {
-    has(handler: TMediatorRequestHandler<any, any>): boolean;
-    add(handler: TMediatorRequestHandler<any, any>): this;
+    registerHandler(handler: TMediatorRequestHandler<any, any>): this;
     onEventError(errorHandler: TMediatorEventErrorHandler): this;
     build(): IMediator;
 }

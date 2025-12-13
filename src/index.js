@@ -93,21 +93,12 @@ function createMediator(handlers, onEventError) {
 }
 
 export function mediatorBuilder() {
-    var handlers = [];
+    var handlersMap = new Map();
     var eventErrorHandler = null;
 
-    function add(handler) {
-        if (handlers.some((it) => it.type === handler.type)) {
-            throw new Error(
-                "Another handler for request is already registered",
-            );
-        }
-        handlers.push(handler);
+    function registerHandler(handler) {
+        handlersMap.set(handler.type, handler);
         return this;
-    }
-
-    function has(handler) {
-        return handlers.includes(handler);
     }
 
     function onEventError(fn) {
@@ -118,8 +109,11 @@ export function mediatorBuilder() {
     }
 
     function build() {
-        return createMediator([...handlers], eventErrorHandler);
+        return createMediator(
+            Array.from(handlersMap.values()),
+            eventErrorHandler,
+        );
     }
 
-    return Object.freeze({ add, has, build, onEventError });
+    return Object.freeze({ registerHandler, build, onEventError });
 }

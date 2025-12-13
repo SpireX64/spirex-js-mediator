@@ -143,16 +143,6 @@ describe("@spirex/mediator", () => {
             expect(builder).is.frozen;
         });
 
-        test("WHEN: Check handler was not added", () => {
-            // Arrange ------------
-            var reqType = defineRequest();
-            var handler = createHandler(reqType);
-            var builder = mediatorBuilder();
-
-            // Act & Assert -----
-            expect(builder.has(handler)).is.false;
-        });
-
         test("WHEN: Add request handler", () => {
             // Arrange ---------
             var delegate = vi.fn();
@@ -161,36 +151,11 @@ describe("@spirex/mediator", () => {
             var builder = mediatorBuilder();
 
             // Act -------------
-            var builderRef = builder.add(handler);
+            var builderRef = builder.registerHandler(handler);
 
             // Assert ----------
             expect(builderRef).toBe(builderRef);
-            expect(builder.has(handler)).is.true;
             expect(delegate).not.toHaveBeenCalled();
-        });
-
-        test("WHEN: Add another handler for same request", () => {
-            // Arrange -----
-            var reqType = defineRequest();
-            var delegateA = vi.fn();
-            var handlerA = createHandler(reqType, delegateA);
-            var delegateB = vi.fn();
-            var handlerB = createHandler(reqType, delegateB);
-
-            var builder = mediatorBuilder().add(handlerA);
-
-            // Act ---------
-            var error = catchError(() => {
-                builder.add(handlerB);
-            });
-
-            // Assert ------
-            expect(error).toBeInstanceOf(Error);
-            expect(error.message).toBe(
-                "Another handler for request is already registered",
-            );
-            expect(builder.has(handlerA)).is.true;
-            expect(builder.has(handlerB)).is.false;
         });
 
         test("WHEN: Build mediator", () => {
@@ -215,7 +180,7 @@ describe("@spirex/mediator", () => {
                 var delegate = vi.fn(({ payload }) => ({ value: payload }));
                 var createTaskHandler = createHandler(createTask, delegate);
 
-                var mediator = mediatorBuilder().add(createTaskHandler).build();
+                var mediator = mediatorBuilder().registerHandler(createTaskHandler).build();
 
                 var req = createTask(payload);
 
@@ -273,8 +238,8 @@ describe("@spirex/mediator", () => {
                 var payload = 42;
 
                 var mediator = mediatorBuilder()
-                    .add(reqHandlerA)
-                    .add(reqHandlerB)
+                    .registerHandler(reqHandlerA)
+                    .registerHandler(reqHandlerB)
                     .build();
 
                 // Act ------------
@@ -303,8 +268,8 @@ describe("@spirex/mediator", () => {
                 var handlerB = createHandler(requestB, delegateB);
 
                 var mediator = mediatorBuilder()
-                    .add(handlerA)
-                    .add(handlerB)
+                    .registerHandler(handlerA)
+                    .registerHandler(handlerB)
                     .build();
 
                 // Act -----------
@@ -328,7 +293,7 @@ describe("@spirex/mediator", () => {
                 );
 
                 var mediator = mediatorBuilder()
-                    .add(purchaseRequestHandler)
+                    .registerHandler(purchaseRequestHandler)
                     .build();
 
                 var abortCtrl = new AbortController();

@@ -329,5 +329,106 @@ describe("@spirex/mediator", () => {
                 expect(result).toBe(abortedResult);
             });
         });
+
+        describe("Events", () => {
+            test("WHEN: Add event listener", () => {
+                // Arrange ------
+                var eventType = mediatorEvent();
+                var mediator = mediatorBuilder().build();
+                var listener = vi.fn();
+
+                // Act ----------
+                var dispose = mediator.on(eventType, listener);
+
+                // Assert -------
+                expect(listener).not.toHaveBeenCalled();
+                expect(dispose).toBeInstanceOf(Function);
+            });
+
+            test("WHEN: Publish event", () => {
+                // Arrange ------
+                var eventType = mediatorEvent();
+                var payload = 42;
+                var mediator = mediatorBuilder().build();
+
+                var listener = vi.fn();
+                mediator.on(eventType, listener);
+
+                // Act ----------
+                mediator.publish(eventType(42));
+
+                // Assert -------
+                expect(listener).toHaveBeenCalledWith(
+                    expect.objectContaining({ payload }),
+                );
+            });
+
+            test("WHEN: Publish with many listeners", () => {
+                // Arrange --------
+                var eventType = mediatorEvent();
+                var payload = "foo";
+
+                var mediator = mediatorBuilder().build();
+
+                var listenerA = vi.fn();
+                mediator.on(eventType, listenerA);
+
+                var listenerB = vi.fn();
+                mediator.on(eventType, listenerB);
+
+                // Act ------------
+                mediator.publish(eventType(payload));
+
+                // Assert ---------
+                expect(listenerA).toHaveBeenCalledWith(
+                    expect.objectContaining({ payload }),
+                );
+                expect(listenerB).toHaveBeenCalledWith(
+                    expect.objectContaining({ payload }),
+                );
+            });
+
+            test("WHEN: Subscribe for one event", () => {
+                // Arrange --------
+                var eventType = mediatorEvent();
+                var payloadA = "foo";
+                var payloadB = "bar";
+
+                var mediator = mediatorBuilder().build();
+
+                var listener = vi.fn();
+                mediator.once(eventType, listener);
+
+                // Act ------------
+                mediator.publish(eventType(payloadA));
+                mediator.publish(eventType(payloadB));
+
+                // Assert ---------
+                expect(listener).toHaveBeenCalledOnce({ payload: payloadA });
+            });
+
+            test("WHEN: Dispose listener", () => {
+                // Arrange -------
+                var eventType = mediatorEvent();
+                var payload = 42;
+                var mediator = mediatorBuilder().build();
+
+                var listener = vi.fn();
+                var disposeEvent = mediator.on(eventType, listener);
+
+                var anotherListener = vi.fn();
+                mediator.on(eventType, anotherListener);
+
+                // Act -----------
+                disposeEvent();
+                mediator.publish(eventType(payload));
+
+                // Assert --------
+                expect(listener).not.toHaveBeenCalled();
+                expect(anotherListener).toHaveBeenCalledWith(
+                    expect.objectContaining({ payload }),
+                );
+            });
+        });
     });
 });

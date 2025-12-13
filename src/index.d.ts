@@ -55,6 +55,17 @@ export declare function mediatorEvent<
     Payload = undefined,
 >(): TMediatorEventType<Payload>;
 
+export type TMediatorEventContext<Payload> = Readonly<{
+    type: TMediatorEventType<Payload>;
+    payload: Payload;
+}>;
+
+export type TMediatorEventListener<Payload> = (
+    context: TMediatorEventContext<Payload>,
+) => void | Promise<void>;
+
+export type TMediatorEventListenerDispose = () => void;
+
 // ==============================
 // MEDIATOR
 // ==============================
@@ -64,6 +75,16 @@ export interface IMediator {
         request: TMediatorRequest<T, any>,
         abortSignal?: AbortSignal,
     ): Promise<T>;
+
+    publish<T>(event: TMediatorEvent<T>): void;
+    on<T>(
+        eventType: TMediatorEventType<T>,
+        listener: TMediatorEventListener<T>,
+    ): TMediatorEventListenerDispose;
+    once<T>(
+        eventType: TMediatorEventType<T>,
+        listener: TMediatorEventListener<T>,
+    ): TMediatorEventListenerDispose;
 }
 
 export interface IMediatorBuilder {

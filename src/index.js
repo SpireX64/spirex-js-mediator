@@ -6,32 +6,23 @@ var $Type = Symbol();
 var kRequest = "request";
 var kEvent = "event";
 
-function runMicrotask(fn) {
-    return Promise.resolve().then(fn);
-}
+var runMicrotask = (fn) => Promise.resolve().then(fn);
 
-export function defineRequest() {
-    return function Request(payload) {
-        return Object.freeze({ [$Kind]: kRequest, [$Type]: Request, payload });
+var define = (k) =>
+    function type(payload) {
+        return Object.freeze({ [$Kind]: k, [$Type]: type, payload });
     };
-}
 
-export function defineEvent() {
-    return function Event(payload) {
-        return Object.freeze({ [$Kind]: kEvent, [$Type]: Event, payload });
-    };
-}
-
-export function createHandler(type, handle) {
-    return Object.freeze({ type, handle });
-}
+export var defineRequest = () => define(kRequest);
+export var defineEvent = () => define(kEvent);
+export var createHandler = (type, handle) => Object.freeze({ type, handle });
 
 function createMediator(handlers, onEventError) {
     const eventListenersMap = new Map();
 
     function send(request, abortSignal) {
         if (typeof request != "object" || request[$Kind] != kRequest)
-            throw new Error(
+            throw new TypeError(
                 "Invalid request object. Requests must be created using mediator request type.",
             );
         var requestType = request[$Type];
@@ -73,7 +64,7 @@ function createMediator(handlers, onEventError) {
         });
     }
 
-    function on(eventType, listener) {
+    var on = (eventType, listener) => {
         if (typeof listener != "function")
             throw new TypeError("Invalid event listener. Expected a function.");
         var listeners = eventListenersMap.get(eventType);
@@ -87,16 +78,16 @@ function createMediator(handlers, onEventError) {
             if (listeners.size == 0) eventListenersMap.delete(eventType);
             return wasDisposed;
         };
-    }
+    };
 
-    function once(eventType, listener) {
+    var once = (eventType, listener) => {
         var dispose = on(eventType, (context) => {
             // Call dispose first, otherwise it won't work
             // if the listener throws an error.
             dispose() && listener(context);
         });
         return dispose;
-    }
+    };
 
     return Object.freeze({ send, publish, on, once });
 }

@@ -38,6 +38,10 @@ function createMediator(handlers) {
     }
 
     function publish(event) {
+        if (typeof event != "object" || event[$Kind] != "e")
+            throw new Error(
+                "Invalid event object. Events must be created using mediator event type.",
+            );
         var type = event[$Type];
         var listeners = eventListenersMap.get(type);
         if (!listeners || listeners.size == 0) return;
@@ -53,6 +57,8 @@ function createMediator(handlers) {
     }
 
     function on(eventType, listener) {
+        if (typeof listener != "function")
+            throw new Error("Invalid event listener. Expected a function.");
         var listeners = eventListenersMap.get(eventType);
         if (!listeners)
             eventListenersMap.set(eventType, (listeners = new Set()));

@@ -429,6 +429,35 @@ describe("@spirex/mediator", () => {
                     expect.objectContaining({ payload }),
                 );
             });
+
+            test("WHEN: pass invalid event object", () => {
+                // Arrange -------
+                var mediator = mediatorBuilder().build();
+
+                // Act -----------
+                var error = catchError(() => mediator.publish({ foo: 42 }));
+
+                // Assert --------
+                expect(error).toBeDefined();
+                expect(error.message).toEqual(
+                    "Invalid event object. Events must be created using mediator event type.",
+                );
+            });
+
+            test("WHEN: pass non-function value as event listener", () => {
+                // Arrange --------
+                var eventType = mediatorEvent();
+                var mediator = mediatorBuilder().build();
+
+                // Act ------------
+                var error = catchError(() => mediator.on(eventType, 42));
+
+                // Assert ---------
+                expect(error).toBeDefined();
+                expect(error.message).toEqual(
+                    "Invalid event listener. Expected a function.",
+                );
+            });
         });
     });
 });

@@ -235,11 +235,29 @@ describe("@spirex/mediator", () => {
                 var mediator = mediatorBuilder().build();
 
                 // Act ---------
-                var err = await catchErrorAsync(() => mediator.send(reqType));
+                var err = await catchErrorAsync(() => mediator.send(reqType()));
 
                 // Assert ------
                 expect(err).toBeInstanceOf(Error);
-                expect(err.message).toBe("Handler not found for the request.");
+                expect(err.message).toEqual(
+                    "Handler not found for the request.",
+                );
+            });
+
+            test("WHEN: send non-request value", async () => {
+                // Arrange -------
+                var mediator = mediatorBuilder().build();
+
+                // Act -----------
+                var err = await catchErrorAsync(() =>
+                    mediator.send({ foo: 42 }),
+                );
+
+                // Assert --------
+                expect(err).toBeInstanceOf(Error);
+                expect(err.message).toBe(
+                    "Invalid request object. Requests must be created using mediator request type.",
+                );
             });
 
             test("WHEN: send request, but Mediator has many handlers", async () => {

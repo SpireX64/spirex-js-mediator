@@ -25,6 +25,10 @@ function createMediator(handlers) {
     const eventListenersMap = new Map();
 
     function send(request, abortSignal) {
+        if (typeof request != "object" || request[$Kind] != "r")
+            throw new Error(
+                "Invalid request object. Requests must be created using mediator request type.",
+            );
         var requestType = request[$Type];
         var handler = handlers.find((it) => it.type === requestType);
         if (!handler) throw new Error("Handler not found for the request.");

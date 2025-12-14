@@ -17,7 +17,7 @@ export var defineRequest = () => define(kRequest);
 export var defineEvent = () => define(kEvent);
 export var createHandler = (type, handle) => Object.freeze({ type, handle });
 
-function createMediator(handlers, onEventError) {
+function createMediator(handlersMap, onEventError) {
     const eventListenersMap = new Map();
 
     function send(request, abortSignal) {
@@ -25,8 +25,7 @@ function createMediator(handlers, onEventError) {
             throw new TypeError(
                 "Invalid request object. Requests must be created using mediator request type.",
             );
-        var requestType = request[$Type];
-        var handler = handlers.find((it) => it.type === requestType);
+        var handler = handlersMap.get(request[$Type]);
         if (!handler) throw new Error("Handler not found for the request.");
         return runMicrotask(() =>
             handler.handle({
@@ -96,8 +95,13 @@ export function mediatorBuilder() {
     var handlersMap = new Map();
     var eventErrorHandler = null;
 
-    function registerHandler(handler) {
-        handlersMap.set(handler.type, handler);
+    function registerHandler(handlerOrHandlers) {
+        (Array.isArray(handlerOrHandlers)
+            ? handlerOrHandlers
+            : [handlerOrHandlers]
+        ).forEach((handler) => {
+            handlersMap.set(handler.type, handler);
+        });
         return this;
     }
 
@@ -110,7 +114,7 @@ export function mediatorBuilder() {
 
     function build() {
         return createMediator(
-            Array.from(handlersMap.values()),
+            handlersMap,
             eventErrorHandler,
         );
     }

@@ -158,6 +158,26 @@ describe("@spirex/mediator", () => {
             expect(delegate).not.toHaveBeenCalled();
         });
 
+        test("WHEN: Add many handlers as list", () => {
+            var reqTypeA = defineRequest();
+            var handlerA = createHandler(reqTypeA, vi.fn());
+            var reqTypeB = defineRequest();
+            var handlerB = createHandler(reqTypeB, vi.fn());
+
+            var builder = mediatorBuilder();
+
+            // Act -------------
+            var builderRef = builder.registerHandler([
+                handlerA,
+                handlerB,
+            ]);
+
+            // Assert ----------
+            expect(builderRef).toBe(builderRef);
+            expect(handlerA.handle).not.toHaveBeenCalled();
+            expect(handlerB.handle).not.toHaveBeenCalled();
+        })
+
         test("WHEN: Build mediator", () => {
             // Arrange -----
             var builder = mediatorBuilder();

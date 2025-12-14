@@ -94,7 +94,11 @@ export interface IMediator {
 }
 
 export interface IMediatorBuilder {
-    registerHandler(handler: TMediatorRequestHandler<any, any>): this;
+    registerHandler(
+        handler:
+            | TMediatorRequestHandler<any, any>
+            | readonly TMediatorRequestHandler<any, any>[],
+    ): this;
     onEventError(errorHandler: TMediatorEventErrorHandler): this;
     build(): IMediator;
 }

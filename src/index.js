@@ -27,10 +27,11 @@ function createMediator(handlersMap, onEventError) {
             );
         var handler = handlersMap.get(request[$Type]);
         if (!handler) throw new Error("Handler not found for the request.");
+        var mediator = this;
         return runMicrotask(() =>
             handler.handle({
                 abortSignal,
-                mediator: this,
+                mediator,
                 payload: request.payload,
             }),
         );
@@ -88,7 +89,10 @@ function createMediator(handlersMap, onEventError) {
         return dispose;
     };
 
-    return Object.freeze({ send, publish, on, once });
+    var inst = { on, once };
+    inst.send = send.bind(inst);
+    inst.publish = publish.bind(inst);
+    return Object.freeze(inst);
 }
 
 export function mediatorBuilder() {

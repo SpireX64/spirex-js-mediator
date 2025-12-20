@@ -18,7 +18,7 @@ export var defineEvent = () => define(kEvent);
 export var createHandler = (type, handle) => Object.freeze({ type, handle });
 
 function createMediator(handlersMap, onEventError) {
-    const eventListenersMap = new Map();
+    var eventListenersMap = new Map();
 
     function send(request, abortSignal) {
         if (typeof request != "object" || request[$Kind] != kRequest)

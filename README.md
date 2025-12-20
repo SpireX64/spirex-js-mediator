@@ -1,8 +1,11 @@
 # Mediator for JS/TS
 
-`@spirex/mediator` is a lightweight and strongly-typed Mediator implementation for JavaScript and TypeScript.
+![NPM Type Definitions](https://img.shields.io/npm/types/%40spirex%2Fmediator?style=for-the-badge)
+[![NPM Version](https://img.shields.io/npm/v/%40spirex%2Fmediator?style=for-the-badge)](https://www.npmjs.com/package/@spirex/mediator)
+![GitHub License](https://img.shields.io/github/license/spirex64/spirex-js-mediator?style=for-the-badge)
+[![Codecov](https://img.shields.io/codecov/c/github/spirex64/spirex-js-mediator?token=VXQZK5WDSY&style=for-the-badge)](https://codecov.io/github/SpireX64/spirex-js-mediator)
 
-It helps you build event-driven architectures and apply the CQRS (Command Query Responsibility Segregation) pattern in a simple and explicit way.
+`@spirex/mediator` is a lightweight mediator for JavaScript and TypeScript that simplifies event-driven architecture, CQRS, and decoupled application design.
 
 The library focuses on decoupling application layers by removing direct dependencies between senders and receivers.
 Instead of calling services or modules directly, application parts communicate through requests and events handled by the mediator.

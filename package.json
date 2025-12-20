@@ -1,11 +1,60 @@
 {
   "name": "@spirex/mediator",
-  "version": "0.0.1",
-  "description": "Lightweight and fully typed Mediator library for JS/TS, enabling clean, modular, and testable architecture with minimal boilerplate.",
-  "main": "dist/index.js",
-  "author": "Artem Sobolenkov",
+  "version": "1.0.0",
+  "description": "Lightweight mediator for JavaScript and TypeScript that simplifies event-driven architecture, CQRS, and decoupled application design.",
+  "keywords": [
+    "mediator",
+    "cqrs",
+    "command-query",
+    "events",
+    "event-bus",
+    "event-driven",
+    "event-listener",
+    "message-bus",
+    "message-driven",
+    "command-handler",
+    "pub-sub",
+    "async",
+    "ddd",
+    "domain-driven-design",
+    "decoupled-architecture",
+    "orchestration",
+    "decoupling",
+    "javascript",
+    "typescript",
+    "lightweight",
+    "spirex"
+  ],
+  "homepage": "https://github.com/SpireX64/spirex-js-mediator",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SpireX64/spirex-js-mediator.git",
+    "directory": "packages/di"
+  },
+  "author": {
+    "name": "Artem Sobolenkov",
+    "email": "SpireX@outlook.com",
+    "url": "https://github.com/SpireX64"
+  },
   "license": "MIT",
   "private": false,
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "default": "./dist/index.cjs"
+      },
+      "default": {
+        "default": "./dist/index.js"
+      }
+    }
+  },
   "scripts": {
     "test": "vitest run --config ./vitest.config.mjs",
     "test:c": "vitest run --config ./vitest.config.mjs --coverage",

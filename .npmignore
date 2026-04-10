@@ -2,6 +2,7 @@
 src/
 node_modules/
 coverage/
+changelog/
 .github/
 yarn.lock
 tsconfig.json

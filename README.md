@@ -451,8 +451,3 @@ They propagate back to the sender and should be handled where the request is sen
 This makes failures explicit and keeps error handling predictable.
 
 Event listener errors, on the other hand, are isolated from the publisher and should be handled via **`setEventHandler`** on the mediator (see **Event Listeners Execution Model** above).
-
-## Changelog
-
-Release notes and migration hints for older package versions live under [`changelog/`](changelog/)
-

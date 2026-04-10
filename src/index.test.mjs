@@ -3,6 +3,7 @@ import {
     defineRequest,
     createHandler,
     defineEvent,
+    createMediator,
     mediatorBuilder,
 } from "./index";
 
@@ -22,25 +23,32 @@ async function catchErrorAsync(fn) {
     }
 }
 
+/** Drain a few microtask turns (nested publish / promise rejection paths). */
+async function flushMicrotasks(times) {
+    for (var i = 0; i < times; i++) await Promise.resolve();
+}
+
 describe("@spirex/mediator", () => {
     describe("Request definition", () => {
         test("WHEN: Define request type", () => {
-            // Act ---------
             var reqType = defineRequest();
 
-            // Assert ------
             expect(reqType).toBeDefined();
             expect(reqType).toBeInstanceOf(Function);
+            expect(reqType.name).toBe("requestUnnamed");
+        });
+
+        test("WHEN: Define request with custom name", () => {
+            var reqType = defineRequest({ name: "MyRequest" });
+
+            expect(reqType.name).toBe("MyRequest");
         });
 
         test("WHEN: Create request", () => {
-            // Arrange -----
             var reqType = defineRequest();
 
-            // Act ---------
             var req = reqType();
 
-            // Assert ------
             expect(req).toBeDefined();
             expect(req).toBeInstanceOf(Object);
             expect(req).is.frozen;
@@ -48,14 +56,11 @@ describe("@spirex/mediator", () => {
         });
 
         test("WHEN: Create request with object payload", () => {
-            // Arrange -----
             var reqType = defineRequest();
             var payload = { value: 42 };
 
-            // Act ---------
             var req = reqType(payload);
 
-            // Assert ------
             expect(req).toBeDefined();
             expect(req).toBeInstanceOf(Object);
             expect(req).is.frozen;
@@ -63,31 +68,25 @@ describe("@spirex/mediator", () => {
         });
 
         test("WHEN: Create request with primitive payload", () => {
-            // Arrange -----
             var reqType = defineRequest();
             var payload = 42;
 
-            // Act --------
             var req = reqType(payload);
 
-            // Assert ----
             expect(req).toBeDefined(req);
             expect(req).toBeInstanceOf(Object);
             expect(req).is.frozen;
-            expect(payload).toBe(payload);
+            expect(req.payload).toBe(payload);
         });
     });
 
     describe("Request Handler", () => {
         test("WHEN: Define request handler", () => {
-            // Arrange -------
             var reqType = defineRequest();
             var delegate = vi.fn();
 
-            // Act -----------
             var handler = createHandler(reqType, delegate);
 
-            // Assert --------
             expect(handler).toBeInstanceOf(Object);
             expect(handler).is.frozen;
             expect(handler.type).toBe(reqType);
@@ -98,116 +97,84 @@ describe("@spirex/mediator", () => {
 
     describe("Event definition", () => {
         test("WHEN: Define event type", () => {
-            // Act ---------
             var eventType = defineEvent();
 
-            // Assert ------
             expect(eventType).toBeInstanceOf(Function);
+            expect(eventType.name).toBe("eventUnnamed");
+        });
+
+        test("WHEN: Define stateful event", () => {
+            var eventType = defineEvent({ stateful: true });
+
+            expect(eventType.stateful).toBe(true);
         });
 
         test("WHEN: Create event instance", () => {
-            // Arrange ------
             var eventType = defineEvent();
 
-            // Act ----------
             var ev = eventType();
 
-            // Assert ------
             expect(ev).toBeInstanceOf(Object);
             expect(ev).is.frozen;
             expect(ev.payload).is.undefined;
         });
 
         test("WHEN: Create event instance with payload", () => {
-            // Arrange ------
             var payload = 42;
             var eventType = defineEvent();
 
-            // Act ----------
             var ev = eventType(payload);
 
-            // Assert -------
             expect(ev).toBeInstanceOf(Object);
             expect(ev).is.frozen;
             expect(ev.payload).toBe(payload);
         });
     });
 
-    describe("Mediator Builder", () => {
-        test("WHEN: Create builder instance", () => {
-            // Act ---------
-            var builder = mediatorBuilder();
+    describe("createMediator and mediatorBuilder", () => {
+        test("WHEN: createMediator returns frozen instance with API", () => {
+            var m = createMediator();
 
-            // Assert ------
-            expect(builder).toBeInstanceOf(Object);
-            expect(builder).is.frozen;
+            expect(m).is.frozen;
+            expect(typeof m.send).toBe("function");
+            expect(typeof m.publish).toBe("function");
+            expect(typeof m.on).toBe("function");
+            expect(typeof m.once).toBe("function");
+            expect(typeof m.registerHandler).toBe("function");
+            expect(typeof m.setEventHandler).toBe("function");
+            expect(typeof m.clearState).toBe("function");
+            expect(typeof m.getEventListenersCount).toBe("function");
+            expect(typeof m.disposeEventListeners).toBe("function");
+            expect(typeof m.build).toBe("function");
         });
 
-        test("WHEN: Add request handler", () => {
-            // Arrange ---------
-            var delegate = vi.fn();
-            var reqType = defineRequest();
-            var handler = createHandler(reqType, delegate);
-            var builder = mediatorBuilder();
-
-            // Act -------------
-            var builderRef = builder.registerHandler(handler);
-
-            // Assert ----------
-            expect(builderRef).toBe(builderRef);
-            expect(delegate).not.toHaveBeenCalled();
+        test("WHEN: mediatorBuilder is alias of createMediator", () => {
+            expect(mediatorBuilder).toBe(createMediator);
         });
 
-        test("WHEN: Add many handlers as list", () => {
-            var reqTypeA = defineRequest();
-            var handlerA = createHandler(reqTypeA, vi.fn());
-            var reqTypeB = defineRequest();
-            var handlerB = createHandler(reqTypeB, vi.fn());
+        test("WHEN: build returns same instance", () => {
+            var m = createMediator();
 
-            var builder = mediatorBuilder();
-
-            // Act -------------
-            var builderRef = builder.registerHandler([
-                handlerA,
-                handlerB,
-            ]);
-
-            // Assert ----------
-            expect(builderRef).toBe(builderRef);
-            expect(handlerA.handle).not.toHaveBeenCalled();
-            expect(handlerB.handle).not.toHaveBeenCalled();
-        })
-
-        test("WHEN: Build mediator", () => {
-            // Arrange -----
-            var builder = mediatorBuilder();
-
-            // Act ---------
-            var mediator = builder.build();
-
-            // Assert ------
-            expect(mediator).toBeInstanceOf(Object);
+            expect(m.build()).toBe(m);
         });
     });
 
     describe("Mediator", () => {
         describe("Requests", () => {
             test("WHEN: send request", async () => {
-                // Arrange ------
                 var createTask = defineRequest();
 
                 var payload = "foo";
                 var delegate = vi.fn(({ payload }) => ({ value: payload }));
                 var createTaskHandler = createHandler(createTask, delegate);
 
-                var mediator = mediatorBuilder().registerHandler(createTaskHandler).build();
+                var mediator = createMediator();
+                mediator.registerHandler(createTaskHandler);
 
                 var req = createTask(payload);
 
-                // Act ----------
                 var result = await mediator.send(req);
 
-                // Assert -------
                 expect(delegate).toHaveBeenCalledWith(
                     expect.objectContaining({ payload, mediator }),
                 );
@@ -215,38 +182,68 @@ describe("@spirex/mediator", () => {
             });
 
             test("WHEN: send unsupported request", async () => {
-                // Arrange -----
                 var reqType = defineRequest();
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
 
-                // Act ---------
                 var err = await catchErrorAsync(() => mediator.send(reqType()));
 
-                // Assert ------
                 expect(err).toBeInstanceOf(Error);
                 expect(err.message).toEqual(
-                    "Handler not found for the request.",
+                    'Handler not found for the request "requestUnnamed".',
+                );
+            });
+
+            test("WHEN: send unsupported request with custom type name", async () => {
+                var reqType = defineRequest({ name: "NamedReq" });
+                var mediator = createMediator();
+
+                var err = await catchErrorAsync(() => mediator.send(reqType()));
+
+                expect(err.message).toEqual(
+                    'Handler not found for the request "NamedReq".',
                 );
             });
 
             test("WHEN: send non-request value", async () => {
-                // Arrange -------
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
 
-                // Act -----------
                 var err = await catchErrorAsync(() =>
                     mediator.send({ foo: 42 }),
                 );
 
-                // Assert --------
                 expect(err).toBeInstanceOf(Error);
                 expect(err.message).toBe(
                     "Invalid request object. Requests must be created using mediator request type.",
                 );
             });
 
+            test("WHEN: duplicate registerHandler throws", () => {
+                var reqType = defineRequest();
+                var h = createHandler(reqType, () => {});
+                var mediator = createMediator();
+                mediator.registerHandler(h);
+
+                var err = catchError(() => mediator.registerHandler(h));
+
+                expect(err).toBeInstanceOf(Error);
+                expect(err.message).toBe(
+                    'Handler for the request "requestUnnamed" already registered.',
+                );
+            });
+
+            test("WHEN: duplicate in batch throws", () => {
+                var reqType = defineRequest();
+                var h = createHandler(reqType, () => {});
+                var mediator = createMediator();
+
+                var err = catchError(() =>
+                    mediator.registerHandler([h, h]),
+                );
+
+                expect(err).toBeInstanceOf(Error);
+            });
+
             test("WHEN: send request, but Mediator has many handlers", async () => {
-                // Arrange --------
                 var reqTypeA = defineRequest();
                 var reqADelegate = vi.fn(({ payload }) => payload);
                 var reqHandlerA = createHandler(reqTypeA, reqADelegate);
@@ -257,15 +254,12 @@ describe("@spirex/mediator", () => {
 
                 var payload = 42;
 
-                var mediator = mediatorBuilder()
-                    .registerHandler(reqHandlerA)
-                    .registerHandler(reqHandlerB)
-                    .build();
+                var mediator = createMediator();
+                mediator.registerHandler(reqHandlerA);
+                mediator.registerHandler(reqHandlerB);
 
-                // Act ------------
                 var result = await mediator.send(reqTypeB(payload));
 
-                // Assert ---------
                 expect(reqADelegate).not.toHaveBeenCalled();
                 expect(reqBDelegate).toHaveBeenCalledWith(
                     expect.objectContaining({ payload, mediator }),
@@ -274,7 +268,6 @@ describe("@spirex/mediator", () => {
             });
 
             test("WHEN: send request from handler", async () => {
-                // Arrange -------
                 var expectedResult = 42;
 
                 var requestA = defineRequest();
@@ -287,22 +280,18 @@ describe("@spirex/mediator", () => {
                 );
                 var handlerB = createHandler(requestB, delegateB);
 
-                var mediator = mediatorBuilder()
-                    .registerHandler(handlerA)
-                    .registerHandler(handlerB)
-                    .build();
+                var mediator = createMediator();
+                mediator.registerHandler(handlerA);
+                mediator.registerHandler(handlerB);
 
-                // Act -----------
                 var result = await mediator.send(requestB());
 
-                // Assert --------
                 expect(result).toBe(expectedResult);
                 expect(delegateA).toHaveBeenCalled();
                 expect(delegateB).toHaveBeenCalled();
             });
 
             test("WHEN: Abort request by signal", async () => {
-                // Arrange ----------
                 var abortedResult = "aborted";
 
                 var purchaseRequest = defineRequest();
@@ -312,13 +301,11 @@ describe("@spirex/mediator", () => {
                         abortSignal.aborted ? abortedResult : "purchased",
                 );
 
-                var mediator = mediatorBuilder()
-                    .registerHandler(purchaseRequestHandler)
-                    .build();
+                var mediator = createMediator();
+                mediator.registerHandler(purchaseRequestHandler);
 
                 var abortCtrl = new AbortController();
 
-                // Act ---------
                 var promise = mediator.send(
                     purchaseRequest(),
                     abortCtrl.signal,
@@ -328,42 +315,34 @@ describe("@spirex/mediator", () => {
 
                 var result = await promise;
 
-                // Assert ------
                 expect(result).toBe(abortedResult);
             });
         });
 
         describe("Events", () => {
             test("WHEN: Add event listener", () => {
-                // Arrange ------
                 var eventType = defineEvent();
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
                 var listener = vi.fn();
 
-                // Act ----------
                 var dispose = mediator.on(eventType, listener);
 
-                // Assert -------
                 expect(listener).not.toHaveBeenCalled();
                 expect(dispose).toBeInstanceOf(Function);
             });
 
             test("WHEN: Publish event", async () => {
-                // Arrange ------
                 var eventType = defineEvent();
                 var payload = 42;
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
 
                 var listener = vi.fn();
                 mediator.on(eventType, listener);
 
-                // Act ----------
                 mediator.publish(eventType(42));
 
-                // Wait for microtask completion
                 await Promise.resolve();
 
-                // Assert -------
                 expect(listener).toHaveBeenCalledWith(
                     expect.objectContaining({
                         type: eventType,
@@ -374,30 +353,26 @@ describe("@spirex/mediator", () => {
             });
 
             test("WHEN: Publish event without listeners", () => {
-                // Arrange --------
                 var eventType = defineEvent();
                 var anotherEventType = defineEvent();
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
 
                 var listener = vi.fn();
                 mediator.on(anotherEventType, listener);
 
-                // Act ------------
                 var error = catchError(() => {
                     mediator.publish(eventType());
                 });
 
-                // Assert ---------
                 expect(error).is.undefined;
                 expect(listener).not.toHaveBeenCalled();
             });
 
             test("WHEN: Publish with many listeners", async () => {
-                // Arrange --------
                 var eventType = defineEvent();
                 var payload = "foo";
 
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
 
                 var listenerA = vi.fn();
                 mediator.on(eventType, listenerA);
@@ -405,13 +380,10 @@ describe("@spirex/mediator", () => {
                 var listenerB = vi.fn();
                 mediator.on(eventType, listenerB);
 
-                // Act ------------
                 mediator.publish(eventType(payload));
 
-                // Wait for microtask completion
                 await Promise.resolve();
 
-                // Assert ---------
                 expect(listenerA).toHaveBeenCalledWith(
                     expect.objectContaining({
                         type: eventType,
@@ -429,24 +401,20 @@ describe("@spirex/mediator", () => {
             });
 
             test("WHEN: Subscribe for one event", async () => {
-                // Arrange --------
                 var eventType = defineEvent();
                 var payloadA = "foo";
                 var payloadB = "bar";
 
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
 
                 var listener = vi.fn();
                 mediator.once(eventType, listener);
 
-                // Act ------------
                 mediator.publish(eventType(payloadA));
                 mediator.publish(eventType(payloadB));
 
-                // Wait for microtask completion
                 await Promise.resolve();
 
-                // Assert ---------
                 expect(listener).toHaveBeenCalledExactlyOnceWith(
                     expect.objectContaining({
                         type: eventType,
@@ -456,11 +424,238 @@ describe("@spirex/mediator", () => {
                 );
             });
 
+            test("WHEN: once ignores stateful replay", () => {
+                var eventType = defineEvent({ stateful: true });
+                var mediator = createMediator();
+
+                mediator.publish(eventType("first"));
+
+                var listener = vi.fn();
+                mediator.once(eventType, listener);
+
+                expect(listener).not.toHaveBeenCalled();
+            });
+
+            test("WHEN: stateful replay on on()", () => {
+                var eventType = defineEvent({ stateful: true });
+                var mediator = createMediator();
+
+                mediator.publish(eventType("state"));
+
+                var listener = vi.fn();
+                mediator.on(eventType, listener);
+
+                expect(listener).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        type: eventType,
+                        payload: "state",
+                        mediator,
+                    }),
+                );
+            });
+
+            test("WHEN: clearState removes replay", () => {
+                var eventType = defineEvent({ stateful: true });
+                var mediator = createMediator();
+
+                mediator.publish(eventType("x"));
+                expect(mediator.clearState(eventType)).toBe(true);
+
+                var listener = vi.fn();
+                mediator.on(eventType, listener);
+
+                expect(listener).not.toHaveBeenCalled();
+            });
+
+            test("WHEN: getEventListenersCount and disposeEventListeners", () => {
+                var eventType = defineEvent();
+                var mediator = createMediator();
+
+                expect(mediator.getEventListenersCount(eventType)).toBe(0);
+
+                var l1 = vi.fn();
+                var l2 = vi.fn();
+                mediator.on(eventType, l1);
+                mediator.on(eventType, l2);
+
+                expect(mediator.getEventListenersCount(eventType)).toBe(2);
+
+                expect(mediator.disposeEventListeners(eventType)).toBe(true);
+                expect(mediator.getEventListenersCount(eventType)).toBe(0);
+
+                expect(mediator.disposeEventListeners(eventType)).toBe(false);
+            });
+
+            test("WHEN: listener returns plain object does not forward", async () => {
+                var eventType = defineEvent();
+                var mediator = createMediator();
+
+                mediator.on(eventType, () => ({}));
+
+                var error = catchError(() => mediator.publish(eventType()));
+
+                await flushMicrotasks(2);
+
+                expect(error).is.undefined;
+            });
+
+            test("WHEN: forward request instance synchronously from listener", async () => {
+                var Ev = defineEvent();
+                var Req = defineRequest();
+                var delegate = vi.fn(() => "sync-req");
+                var mediator = createMediator();
+                mediator.registerHandler(createHandler(Req, delegate));
+
+                mediator.on(Ev, () => Req());
+
+                mediator.publish(Ev());
+
+                await flushMicrotasks(3);
+
+                expect(delegate).toHaveBeenCalled();
+            });
+
+            test("WHEN: forward event from listener", async () => {
+                var A = defineEvent();
+                var B = defineEvent();
+                var mediator = createMediator();
+
+                var bListener = vi.fn();
+                mediator.on(B, bListener);
+
+                mediator.on(A, () => B("fwd"));
+
+                mediator.publish(A());
+
+                await flushMicrotasks(3);
+
+                expect(bListener).toHaveBeenCalledWith(
+                    expect.objectContaining({ payload: "fwd", mediator }),
+                );
+            });
+
+            test("WHEN: forward request from listener", async () => {
+                var Ev = defineEvent();
+                var Req = defineRequest();
+                var delegate = vi.fn(() => "done");
+
+                var mediator = createMediator();
+                mediator.registerHandler(createHandler(Req, delegate));
+
+                mediator.on(Ev, ({ mediator: m }) => m.send(Req()));
+
+                mediator.publish(Ev());
+
+                await Promise.resolve();
+                await Promise.resolve();
+
+                expect(delegate).toHaveBeenCalled();
+            });
+
+            test("WHEN: once forwards return value like on", async () => {
+                var A = defineEvent();
+                var B = defineEvent();
+                var mediator = createMediator();
+
+                var bListener = vi.fn();
+                mediator.on(B, bListener);
+
+                mediator.once(A, () => B("via-once"));
+
+                mediator.publish(A());
+
+                await flushMicrotasks(3);
+
+                expect(bListener).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        payload: "via-once",
+                        mediator,
+                    }),
+                );
+            });
+
+            test("WHEN: Listener throws error", async () => {
+                var eventType = defineEvent();
+                var mediator = createMediator();
+
+                mediator.on(eventType, () => {
+                    throw new Error("Test Error");
+                });
+
+                var listener = vi.fn();
+                mediator.on(eventType, listener);
+
+                var error = catchError(() => mediator.publish(eventType()));
+
+                await Promise.resolve();
+
+                expect(error).is.undefined;
+                expect(listener).toHaveBeenCalled();
+            });
+
+            test("WHEN: Catch listener error via setEventHandler", async () => {
+                var payload = 42;
+                var eventType = defineEvent();
+                var eventErrorHandler = vi.fn();
+
+                var mediator = createMediator();
+                mediator.setEventHandler(eventErrorHandler);
+                var expectedError = new Error("Test Error");
+
+                mediator.on(eventType, () => {
+                    throw expectedError;
+                });
+
+                mediator.publish(eventType(payload));
+
+                await Promise.resolve();
+
+                expect(eventErrorHandler).toHaveBeenCalledWith(
+                    expectedError,
+                    expect.objectContaining({
+                        type: eventType,
+                        mediator,
+                        payload,
+                    }),
+                );
+            });
+
+            test("WHEN: Catch async listener rejection via setEventHandler", async () => {
+                var eventType = defineEvent();
+                var eventErrorHandler = vi.fn();
+                var mediator = createMediator();
+                mediator.setEventHandler(eventErrorHandler);
+
+                var err = new Error("async fail");
+                mediator.on(eventType, () => Promise.reject(err));
+
+                mediator.publish(eventType());
+
+                await flushMicrotasks(4);
+
+                expect(eventErrorHandler).toHaveBeenCalledWith(
+                    err,
+                    expect.objectContaining({ type: eventType, mediator }),
+                );
+            });
+
+            test("WHEN: Pass non-function value as error handler", () => {
+                var mediator = createMediator();
+
+                var error = catchError(() => {
+                    mediator.setEventHandler({ foo: "bar" });
+                });
+
+                expect(error).toBeInstanceOf(TypeError);
+                expect(error.message).toEqual(
+                    "Invalid error handler. Expected a function.",
+                );
+            });
+
             test("WHEN: Dispose listener", async () => {
-                // Arrange -------
                 var eventType = defineEvent();
                 var payload = 42;
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
 
                 var listener = vi.fn();
                 var disposeEvent = mediator.on(eventType, listener);
@@ -468,14 +663,12 @@ describe("@spirex/mediator", () => {
                 var anotherListener = vi.fn();
                 mediator.on(eventType, anotherListener);
 
-                // Act -----------
-                disposeEvent();
+                expect(disposeEvent()).toBe(true);
+
                 mediator.publish(eventType(payload));
 
-                // Wait for microtask completion
                 await Promise.resolve();
 
-                // Assert --------
                 expect(listener).not.toHaveBeenCalled();
                 expect(anotherListener).toHaveBeenCalledWith(
                     expect.objectContaining({
@@ -487,13 +680,10 @@ describe("@spirex/mediator", () => {
             });
 
             test("WHEN: pass invalid event object", () => {
-                // Arrange -------
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
 
-                // Act -----------
                 var error = catchError(() => mediator.publish({ foo: 42 }));
 
-                // Assert --------
                 expect(error).toBeDefined();
                 expect(error.message).toEqual(
                     "Invalid event object. Events must be created using mediator event type.",
@@ -501,88 +691,14 @@ describe("@spirex/mediator", () => {
             });
 
             test("WHEN: pass non-function value as event listener", () => {
-                // Arrange --------
                 var eventType = defineEvent();
-                var mediator = mediatorBuilder().build();
+                var mediator = createMediator();
 
-                // Act ------------
                 var error = catchError(() => mediator.on(eventType, 42));
 
-                // Assert ---------
                 expect(error).toBeDefined();
                 expect(error.message).toEqual(
                     "Invalid event listener. Expected a function.",
-                );
-            });
-
-            test("WHEN: Listener throws error", async () => {
-                // Arrange ---------
-                var eventType = defineEvent();
-                var mediator = mediatorBuilder().build();
-
-                mediator.on(eventType, () => {
-                    throw new Error("Test Error");
-                });
-
-                var listener = vi.fn();
-                mediator.on(eventType, listener);
-
-                // Act -------------
-                var error = catchError(() => mediator.publish(eventType()));
-
-                // Wait for microtask completion
-                await Promise.resolve();
-
-                // Assert ----------
-                expect(error).is.undefined;
-                expect(listener).toHaveBeenCalled();
-            });
-
-            test("WHEN: Catch listener error", async () => {
-                // Arrange ---------
-                var payload = 42;
-                var eventType = defineEvent();
-                var eventErrorHandler = vi.fn();
-
-                var mediator = mediatorBuilder()
-                    .onEventError(eventErrorHandler)
-                    .build();
-                var expectedError = new Error("Test Error");
-
-                mediator.on(eventType, () => {
-                    throw expectedError;
-                });
-
-                // Act -------------
-                mediator.publish(eventType(payload));
-
-                // Wait for microtask completion
-                await Promise.resolve();
-
-                // Assert ----------
-                expect(eventErrorHandler).toHaveBeenCalledWith(
-                    expectedError,
-                    expect.objectContaining({
-                        type: eventType,
-                        mediator,
-                        payload,
-                    }),
-                );
-            });
-
-            test("WHEN: Pass non-function value as error handler", () => {
-                // Arrange --------
-                var builder = mediatorBuilder();
-
-                // Act ------------
-                var error = catchError(() => {
-                    builder.onEventError({ foo: "bar" });
-                });
-
-                // Assert ---------
-                expect(error).toBeInstanceOf(TypeError);
-                expect(error.message).toEqual(
-                    "Invalid error handler. Expected a function.",
                 );
             });
         });

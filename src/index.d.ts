@@ -1,3 +1,12 @@
+/**
+ * Generic options for mediator entities
+ * @since 1.1.0
+ */
+export type TMediatorGenericOptions = {
+    /** Optional display name */
+    name?: string;
+};
+
 // =====================================================================================
 // REQUESTS
 // =====================================================================================
@@ -25,12 +34,22 @@ export type TMediatorRequestType<
     ? () => TMediatorRequest<Result>
     : (payload: Payload) => TMediatorRequest<Result, Payload>;
 
+/** 
+ * Options for mediator request type definition
+ * @since 1.1.0
+ */
+export type TMediatorRequestOptions = TMediatorGenericOptions;
+
 /**
- * Defines a new mediator request type.
+ * Defines a new mediator request type (a factory for request instances).
+ *
+ * Each request type may have at most one handler registered per mediator; a second
+ * {@link IMediator.registerHandler} for the same type throws.
  *
  * @template Result The type of the expected result when the request is handled.
  * @template Payload The type of data required to handle the request (optional).
- * @returns A function that generates a request with the specified payload.
+ * @param opt Optional settings; {@link TMediatorGenericOptions.name} identifies the type in errors.
+ * @returns A function that creates frozen request objects for use with {@link IMediator.send}.
  *
  * @example
  * const CreateTask = defineRequest<Task, { desc: string }>();
@@ -39,7 +58,7 @@ export type TMediatorRequestType<
 export declare function defineRequest<
     Result,
     Payload = undefined,
->(): TMediatorRequestType<Result, Payload>;
+>(opt?: TMediatorRequestOptions): TMediatorRequestType<Result, Payload>;
 
 /**
  * Provides context for a mediator request handler.
@@ -48,9 +67,9 @@ export declare function defineRequest<
 export type IMediatorRequestContext<Payload> = Readonly<{
     /** The data passed with the request. */
     payload: Payload;
-    /** Reference to the mediator that published the event, allowing sending requests or publishing other events. */
+    /** The mediator handling this request (for sending further requests or publishing events). */
     mediator: IMediator;
-    /** Signal Optional AbortSignal to cancel the request */
+    /** Optional `AbortSignal` to cancel the request. */
     abortSignal?: AbortSignal;
 }>;
 
@@ -60,7 +79,7 @@ export type IMediatorRequestContext<Payload> = Readonly<{
  * @template Result The type of the result returned by the handler.
  * @template Payload The type of data passed to the handler.
  * @param context The context object containing payload, mediator, and optional abort signal.
- * @returns Either a Result or a Promise of Result.
+ * @returns Either a `Result` or a `Promise` of `Result`.
  */
 export type TMediatorRequestHandlerDelegate<Result, Payload> = (
     context: IMediatorRequestContext<Payload>,
@@ -85,7 +104,7 @@ export type TMediatorRequestHandler<Result, Payload> = Readonly<{
  * @template Payload The type of data accepted by the handler.
  * @param requestType The mediator request type that this handler will process.
  * @param delegate The function that handles the request.
- * @returns A TMediatorRequestHandler object.
+ * @returns A frozen {@link TMediatorRequestHandler} object.
  */
 export declare function createHandler<Result, Payload>(
     requestType: TMediatorRequestType<Result, Payload>,
@@ -104,6 +123,17 @@ export type TMediatorEvent<Payload = undefined> = Readonly<{
     payload: Payload;
 }>;
 
+/** 
+ * Options for mediator event type definition
+ * @since 1.1.0
+ */
+export type TMediatorEventOptions = TMediatorGenericOptions & {
+    /**
+     * When `true`, the last published payload is replayed to new subscribers.
+     */
+    stateful?: boolean;
+};
+
 /**
  * Represents a factory function for creating a mediator event.
  * @template Payload The type of data carried by the event (optional).
@@ -113,18 +143,19 @@ export type TMediatorEventType<Payload = undefined> = Payload extends undefined
     : (payload: Payload) => TMediatorEvent<Payload>;
 
 /**
- * Define a new mediator event type.
+ * Defines a new mediator event type (a factory for event instances).
  *
  * @template Payload The type of data carried by the event (optional).
- * @returns A function that generates a event instance with the specified payload.
+ * @param opt Optional settings: {@link TMediatorGenericOptions.name} and {@link TMediatorEventOptions.stateful}.
+ * @returns A function that creates frozen event objects for use with {@link IMediator.publish}.
  *
  * @example
  * const OnNewMessage = defineEvent<Message>();
  * let newMessageEvent = OnNewMessage(msg);
  */
-export declare function defineEvent<
-    Payload = undefined,
->(): TMediatorEventType<Payload>;
+export declare function defineEvent<Payload = undefined>(
+    opt?: TMediatorEventOptions,
+): TMediatorEventType<Payload>;
 
 /**
  * Provides context for a mediator event listener.
@@ -135,30 +166,40 @@ export type TMediatorEventContext<Payload> = Readonly<{
     type: TMediatorEventType<Payload>;
     /** The data passed with the event. */
     payload: Payload;
-    /** Reference to the mediator that published the event, allowing sending requests or publishing other events. */
+    /** The mediator that published the event (for sending requests or publishing further events). */
     mediator: IMediator;
 }>;
 
 /**
  * Function type for handling mediator events.
  *
+ * If the listener returns another event or request instance (created with {@link defineEvent} /
+ * {@link defineRequest}), the mediator forwards it: events are {@link IMediator.publish | published},
+ * requests are {@link IMediator.send | sent}. The same applies when a `Promise` resolves to such a value.
  * @template Payload The type of data passed with the event.
  * @param context The context object containing event type, payload, and mediator.
- * @returns Optionally returns a Promise<void> if the listener is asynchronous.
  */
 export type TMediatorEventListener<Payload> = (
     context: TMediatorEventContext<Payload>,
-) => void | Promise<void>;
+) =>
+    | void
+    | undefined
+    | Promise<void>
+    | TMediatorEventType<any>
+    | TMediatorRequestType<any, any>
+    | Promise<TMediatorEventType<any>>
+    | Promise<TMediatorRequestType<any, any>>;
 
-/** Calling this function unsubscribes the listener from the event. */
-export type TMediatorEventListenerDispose = () => void;
+/** Calling this function unsubscribes the listener from the event. Returns whether a listener was removed. */
+export type TMediatorEventListenerDispose = () => boolean;
 
 /**
- * Function type for handling errors thrown by event listeners.
+ * Function type for handling errors thrown by event listeners during {@link IMediator.publish}.
+ * Does not receive errors from synchronous {@link IMediator.on} replay of stateful events (see {@link TMediatorEventOptions.stateful});
+ * those are not wrapped by the mediator.
  *
- * @param error The error object thrown by the listener.
+ * @param error The error thrown by the listener.
  * @param context The event context where the error occurred.
- * @returns Optionally returns a Promise<void> if error handling is asynchronous.
  */
 export type TMediatorEventErrorHandler = (
     error: unknown,
@@ -169,15 +210,17 @@ export type TMediatorEventErrorHandler = (
 // MEDIATOR
 // ==========================================================================================
 
-/** Interface representing the Mediator instance */
+/** Mediator instance: registers request handlers, sends requests, and publishes events. */
 export interface IMediator {
     /**
-     * Sends a request to the corresponding handler and returns a Promise of the result.
+     * Dispatches a request to its registered handler. Execution is scheduled as a microtask.
      *
-     * @template T The type of the expected result.
-     * @param request The request object created via a request factory.
-     * @param abortSignal Optional AbortSignal to cancel the request.
-     * @returns A Promise resolving to the handler's result.
+     * @template T The expected result type.
+     * @param request A request instance from a {@link defineRequest} factory.
+     * @param abortSignal Optional cancellation signal passed to the handler.
+     * @returns A promise of the handler result, or rejection if there is no handler or the handler throws.
+     * @throws {TypeError} If `request` is not a valid mediator request object.
+     * @throws {Error} If no handler was registered for this request type (message includes the type {@link TMediatorGenericOptions.name | name}).
      */
     send<T>(
         request: TMediatorRequest<T, any>,
@@ -185,20 +228,35 @@ export interface IMediator {
     ): Promise<T>;
 
     /**
-     * Publishes an event to all subscribed listeners.
+     * Publishes an event to all current listeners. Each listener runs in a microtask.
      *
-     * @template T The type of payload in the event.
-     * @param event The event instance.
+     * If a listener returns (or resolves to) another event or request, it is forwarded automatically.
+     *
+     * @template T Payload type of the event.
+     * @param event An event instance from a {@link defineEvent} factory.
+     * @throws {TypeError} If `event` is not a valid mediator event object.
      */
     publish<T>(event: TMediatorEvent<T>): void;
 
     /**
-     * Subscribes a listener to a specific event type.
+     * Clears stored payload for a {@link TMediatorEventOptions.stateful | stateful} event type (see {@link defineEvent}).
+     * Subsequent subscribers will not receive a replay until the event is published again.
      *
-     * @template T The type of payload in the event.
-     * @param eventType The event type to listen for.
-     * @param listener Function that will be called whenever the event is published.
-     * @returns A function that can be called to unsubscribe the listener.
+     * @param eventType The event factory returned by {@link defineEvent}.
+     * @returns Whether a stored payload existed and was removed.
+     */
+    clearState(eventType: TMediatorEventType<any>): boolean;
+
+    /**
+     * Subscribes a listener to an event type.
+     *
+     * For **stateful** event types, if a payload was previously published, the listener is invoked **synchronously**
+     * with that payload (same shape as publish). Errors thrown during this replay are not passed to {@link IMediator.setEventHandler}.
+     *
+     * @template T Payload type.
+     * @param eventType Event factory from {@link defineEvent}.
+     * @param listener Called on each publish; return value may forward another event or request.
+     * @returns Unsubscribe function (returns whether the listener was present).
      */
     on<T>(
         eventType: TMediatorEventType<T>,
@@ -206,44 +264,78 @@ export interface IMediator {
     ): TMediatorEventListenerDispose;
 
     /**
-     * Subscribes a listener to a specific event type that will be called only once.
-     *
-     * @template T The type of payload in the event.
-     * @param eventType The event type to listen for.
-     * @param listener Function that will be called once when the event is published.
-     * @returns A function that can be called to unsubscribe the listener (if needed before it fires).
+     * Subscribes a listener that runs at most once.
+     * Does not receive {@link TMediatorEventOptions.stateful | stateful} replay on subscribe; only the next publish fires.
+     * @template T Payload type.
+     * @param eventType Event factory from {@link defineEvent}.
+     * @param listener Called on each publish; return value may forward another event or request.
+     * @returns Unsubscribe function (returns whether the listener was present).
      */
     once<T>(
         eventType: TMediatorEventType<T>,
         listener: TMediatorEventListener<T>,
     ): TMediatorEventListenerDispose;
-}
 
-/** Interface representing the Mediator builder */
-export interface IMediatorBuilder {
     /**
-     * Registers one or multiple request handlers in the mediator.
+     * Returns the number of listeners registered for this event type.
+     * @param eventType The event factory.
+     * @returns The number of listeners registered for this event type.
+     * @since 1.1.0
+     */
+    getEventListenersCount(eventType: TMediatorEventType<any>): number;
+
+    /**
+     * Removes all listeners for this event type. Does **not** clear stored stateful payload;
+     * use {@link clearState} for that.
      *
-     * @param handler A single handler or an array of handlers to register.
-     * @returns The builder instance for chaining.
+     * @param eventType The event factory.
+     * @returns Whether there were any listeners to remove.
+     * @since 1.1.0
+     */
+    disposeEventListeners(eventType: TMediatorEventType<any>): boolean;
+
+    /**
+     * Sets the handler invoked when a listener throws during {@link publish} (microtask path), or when an async
+     * listener's promise rejects before a resolved forward value is produced.
+     *
+     * @param errorHandler Receives the error and the event context.
+     * @since 1.1.0
+     */
+    setEventHandler(errorHandler: TMediatorEventErrorHandler): void;
+
+    /**
+     * Registers one or more request handlers. Registering twice for the same request type throws.
+     *
+     * @param handler A single handler or an array of handlers.
+     * @since 1.1.0
      */
     registerHandler(
         handler:
             | TMediatorRequestHandler<any, any>
             | readonly TMediatorRequestHandler<any, any>[],
-    ): this;
+    ): void;
 
     /**
-     * Sets a global error handler for events.
-     *
-     * @param errorHandler Function that will be called when an event listener throws an error.
-     * @returns The builder instance for chaining.
+     * @deprecated Since 1.1.0 — {@link createMediator} already returns a usable mediator. Prefer using the instance directly.
+     * @returns The same mediator instance (`this`).
      */
-    onEventError(errorHandler: TMediatorEventErrorHandler): this;
-
-    /** Builds and returns the final Mediator instance */
     build(): IMediator;
 }
 
-/** Creates a new Mediator builder instance */
+/**
+ * Creates a mediator instance. No separate “build” step is required.
+ */
+export function createMediator(): IMediator;
+
+/**
+ * @deprecated Since 1.1.0 — use {@link createMediator} instead. This alias exists for backward compatibility.
+ */
+export interface IMediatorBuilder extends IMediator {
+    /** @deprecated Use the mediator directly; same as {@link IMediator.build}. */
+    build(): IMediator;
+}
+
+/**
+ * @deprecated Since 1.1.0 — alias of {@link createMediator}.
+ */
 export function mediatorBuilder(): IMediatorBuilder;

@@ -1,4 +1,4 @@
-# Mediator for JS/TS
+# SpireX's Mediator for JS/TS Projects
 
 ![NPM Type Definitions](https://img.shields.io/npm/types/%40spirex%2Fmediator?style=for-the-badge)
 [![NPM Version](https://img.shields.io/npm/v/%40spirex%2Fmediator?style=for-the-badge)](https://www.npmjs.com/package/@spirex/mediator)
@@ -36,7 +36,7 @@ These APIs are available in all modern JavaScript environments (ES2015+). If you
 ### Module formats
 The package supports multiple module systems out of the box:
 
-- ES Modules (ESM / EJS) – modern standard for JavaScript modules using import and export.
+- ES Modules (ESM) – modern standard for JavaScript modules using `import` and `export`.
 - CommonJS (CJS) – Node.js module system using require and module.exports.
 - UMD (Universal Module Definition) – works in both browsers and Node.js, compatible with AMD and global scripts.
 
@@ -51,65 +51,70 @@ Although the library is written in pure JavaScript, it is fully and strictly typ
 
 ## Quick Start
 This example demonstrates the core concepts of the mediator:
+- how to create a mediator with **`createMediator()`**;
 - how to define requests and events;
 - how to handle requests using pure, stateless handlers;
 - how to publish and subscribe to events.
 
 ```ts
-import { defineRequest } from "@spirex/mediator";
+import {
+    createMediator,
+    createHandler,
+    defineRequest,
+    defineEvent,
+} from "@spirex/mediator";
 
 type Task = {
     id: number;
-    status: 'todo' | 'work' | 'done';
+    status: "todo" | "work" | "done";
     priority: number;
     summary: string;
-}
+};
 
-// Define request with payload type
-const CreateTask = defineRequest<Task, {
-    summary: string;
-    priority: number;
-}>();
+// Define request with payload type (optional `name` improves error messages)
+const CreateTask = defineRequest<Task, { summary: string; priority: number }>({
+    name: "CreateTask",
+});
 
 // Define event to notify about new tasks
 const TaskCreated = defineEvent<Task>();
 
-// Create handler for 'CreateTask' request
 const CreateTaskHandler = createHandler(
     CreateTask,
     async ({ payload, mediator }) => {
         const task: Task = {
             id: generateId(),
-            status: 'todo',
+            status: "todo",
             priority: payload.priority,
             summary: payload.summary,
         };
         await repo.saveTask(task);
 
-        // Notify about new task
         mediator.publish(TaskCreated(task));
         return task;
     },
-)
+);
 
-// Create mediator via builder
-const mediator = mediatorBuilder()
-    .registerHandler(CreateTaskHandler)
-    .build()
+const mediator = createMediator();
+mediator.registerHandler(CreateTaskHandler);
 
-// Subscribe on new tasks
-const dispose = mediator.on(
-    TaskCreated,
-    ({ payload: task }) => {
-        console.log("New task:", task.summary);
-    },
-)
+const dispose = mediator.on(TaskCreated, ({ payload: task }) => {
+    console.log("New task:", task.summary);
+});
 
-// Send request to create new task
-const newTask = await mediator.send(CreateTask({
-    summary: "Make profile screen",
-    priority: 5,
-}));
+const newTask = await mediator.send(
+    CreateTask({ summary: "Make profile screen", priority: 5 }),
+);
+```
+
+### Creating a mediator
+
+Import **`createMediator`** from `@spirex/mediator` and call it to get a ready-to-use instance:
+
+```ts
+import { createMediator } from "@spirex/mediator";
+
+const mediator = createMediator();
 ```
 
 ## Working with the Mediator
@@ -140,6 +145,15 @@ import { defineEvent } from "@spirex/mediator";
 const UserAuthorized = defineEvent<{ userId: string }>();
 ```
 
+You may pass options for a display **`name`** (used in tooling and consistency with requests) and **`stateful`** (see **Stateful events** below):
+
+```ts
+const ThemeChanged = defineEvent<{ theme: string }>({
+    name: "ThemeChanged",
+    stateful: true,
+});
+```
+
 If an event does not carry any data, the payload type can be omitted:
 ```ts
 const AppStarted = defineEvent();
@@ -152,10 +166,9 @@ mediator.publish(UserAuthorized({ userId: "123" }));
 ```
 
 Important characteristics:
-- publish is synchronous;
-- it does not return anything;
-- it does not require awaiting;
-- events do not need to be registered in the mediator.
+- `publish` returns immediately (void); it does not require `await`;
+- listeners run in **microtasks** (scheduled after the current synchronous work);
+- events do not need to be registered in the mediator beforehand.
 
 #### Subscribing to an Event
 You can subscribe to an event using `on` method:
@@ -164,7 +177,7 @@ const dispose = mediator.on(UserAuthorized, ({ payload, mediator }) => {
     console.log("Authorized:", payload.userId);
 });
 ```
-To unsubscribe, call the returned function: `dispose()`
+To unsubscribe, call the returned function: `dispose()`. It returns a boolean indicating whether a listener was removed.
 
 You can also subscribe only once:
 ```ts
@@ -197,13 +210,31 @@ Because listeners have access to the mediator:
 - complex flows can be built by composition, not branching logic;
 - features can evolve independently without modifying the event source.
 
+#### Forwarding another event or request
+A listener may **return** another event or request instance. The mediator will **`publish`** or **`send`** it for you. The same behavior applies to **`on`** and **`once`**. This is a shortcut for triggering follow-up messages, not a data transformation pipeline.
+
+```ts
+mediator.on(OrderPlaced, ({ payload }) =>
+    PaymentRequired(mapToPaymentPayload(payload)),
+);
+```
+
+#### Stateful events
+Pass **`{ stateful: true }`** to **`defineEvent`**. Keeps the last published event for **replay to new subscribers** that event type. When a new subscriber is added with **`on()`**, they are invoked **synchronously** with that payload (same shape as a normal publish). Use **`clearState(eventType)`** to drop the stored payload. **`once()`** does **not** replay stored state; it only runs on the next **`publish`**.
+
+#### Inspecting and clearing listeners
+- **`getEventListenersCount(eventType)`** — number of listeners for an event type.
+- **`disposeEventListeners(eventType)`** — remove all listeners for that type. Stored stateful payload is **not** cleared; call **`clearState`** if needed.
+
 #### Event Listeners Execution Model
 - Event listeners can be synchronous or asynchronous;
-- Each listener is executed independently in its own microtask.
+- Each listener is scheduled in its own **microtask** when the event is published.
 
-This guarantees that:
+This helps ensure that:
 - an error in one listener **does not** affect others;
 - an error **does not** propagate back to the event source.
+
+Use **`setEventHandler(handler)`** to observe listener errors (including **`Promise`** rejections from async listeners before forwarding). Errors during **synchronous stateful replay** on subscribe are **not** passed to this handler (see stateful section above).
 
 
 ### Mediator Requests
@@ -237,6 +268,13 @@ If no payload is required, the payload type can be omitted:
 const GetCurrentUser = defineRequest<User | null>();
 ```
 
+Optional factory options include a **`name`** string (defaults such as `requestUnnamed` appear in error messages if omitted):
+
+```ts
+const CreateUser = defineRequest<User, { name: string; email: string }>({
+    name: "CreateUser",
+});
+```
 
 The returned value is a **request type**, not the request itself.
 Calling it creates a request instance that can be sent through the mediator.
@@ -271,14 +309,14 @@ Handlers are expected to be stateless.
 Any required dependencies should be provided externally, for example via factories or dependency injection.
 
 #### Registering Handlers
-Handlers are registered when building the mediator:
+Register handlers on the mediator instance. **`registerHandler`** accepts one handler or an array of handlers.
+
 ```ts
-const mediator = mediatorBuilder()
-    .registerHandler(CreateUserHandler)
-    .build();
+const mediator = createMediator();
+mediator.registerHandler(CreateUserHandler);
 ```
 
-**Only one** handler can exist for a given **request type**. If another handler for the same request is registered, it **replaces** the previous one.
+**Only one** handler may exist per **request type**. Registering a second handler for the same type **throws an error**.
 
 #### Sending a Request
 A request is executed by sending it through the mediator:
@@ -312,21 +350,14 @@ await mediator.send(
 
 The provided signal is passed to the request handler through the execution context.
 ```ts
-const CreateUserHandler = createHandler(
-    CreateUser,
-    async ({ payload, abortSignal, mediator }) => {
-        const user = await repo.findUserByName(
-            mediator.withName,
-        );
+const DeleteUser = defineRequest<boolean, { id: string }>();
 
+const DeleteUserHandler = createHandler(
+    DeleteUser,
+    async ({ payload, abortSignal }) => {
         if (abortSignal?.aborted) return false;
-
-        const wasDeleted = await repo.deleteUser(
-            payload.with,
-            { signal: abortSignal },
-        );
-        return wasDeleted;
-    }
+        return repo.deleteUserById(payload.id, { signal: abortSignal });
+    },
 );
 ```
 
@@ -362,7 +393,7 @@ Clear naming makes message intent obvious without looking at the handler impleme
 The library allows you to define Commands and Queries, which are special types of Requests. This aligns well with the CQRS (Command Query Responsibility Segregation) pattern, where:
 - Commands — represent operations that change data (e.g., creating or updating a resource).
 - Queries — safe operations that read data without modifying it (e.g., fetching a list of users).
-- 
+
 You can reflect this either in naming:
 
 ```ts
@@ -419,5 +450,9 @@ Errors thrown inside request handlers are considered part of business logic.
 They propagate back to the sender and should be handled where the request is sent.
 This makes failures explicit and keeps error handling predictable.
 
-Event listener errors, on the other hand, are isolated and should be handled via `onEventError`.
+Event listener errors, on the other hand, are isolated from the publisher and should be handled via **`setEventHandler`** on the mediator (see **Event Listeners Execution Model** above).
+
+## Changelog
+
+Release notes and migration hints for older package versions live under [`changelog/`](changelog/)
 

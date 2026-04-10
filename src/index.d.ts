@@ -129,9 +129,9 @@ export type TMediatorEvent<Payload = undefined> = Readonly<{
  */
 export type TMediatorEventOptions = TMediatorGenericOptions & {
     /**
-     * When `true`, the last published payload is replayed to new subscribers.
+     * When `true`, the last published payload is replayed to new `on()` subscribers.
      */
-    stateful?: boolean;
+    replayLast?: boolean;
 };
 
 /**
@@ -146,7 +146,7 @@ export type TMediatorEventType<Payload = undefined> = Payload extends undefined
  * Defines a new mediator event type (a factory for event instances).
  *
  * @template Payload The type of data carried by the event (optional).
- * @param opt Optional settings: {@link TMediatorGenericOptions.name} and {@link TMediatorEventOptions.stateful}.
+ * @param opt Optional settings: {@link TMediatorGenericOptions.name} and {@link TMediatorEventOptions.replayLast}.
  * @returns A function that creates frozen event objects for use with {@link IMediator.publish}.
  *
  * @example
@@ -195,7 +195,7 @@ export type TMediatorEventListenerDispose = () => boolean;
 
 /**
  * Function type for handling errors thrown by event listeners during {@link IMediator.publish}.
- * Does not receive errors from synchronous {@link IMediator.on} replay of stateful events (see {@link TMediatorEventOptions.stateful});
+ * Does not receive errors from synchronous {@link IMediator.on} replay for {@link TMediatorEventOptions.replayLast | replayLast} events (see {@link TMediatorEventOptions});
  * those are not wrapped by the mediator.
  *
  * @param error The error thrown by the listener.
@@ -239,18 +239,18 @@ export interface IMediator {
     publish<T>(event: TMediatorEvent<T>): void;
 
     /**
-     * Clears stored payload for a {@link TMediatorEventOptions.stateful | stateful} event type (see {@link defineEvent}).
+     * Clears stored payload for a {@link TMediatorEventOptions.replayLast | replayLast} event type (see {@link defineEvent}).
      * Subsequent subscribers will not receive a replay until the event is published again.
      *
      * @param eventType The event factory returned by {@link defineEvent}.
      * @returns Whether a stored payload existed and was removed.
      */
-    clearState(eventType: TMediatorEventType<any>): boolean;
+    clearReplay(eventType: TMediatorEventType<any>): boolean;
 
     /**
      * Subscribes a listener to an event type.
      *
-     * For **stateful** event types, if a payload was previously published, the listener is invoked **synchronously**
+     * For event types with **`replayLast`**, if a payload was previously published, the listener is invoked **synchronously**
      * with that payload (same shape as publish). Errors thrown during this replay are not passed to {@link IMediator.setEventHandler}.
      *
      * @template T Payload type.
@@ -265,7 +265,7 @@ export interface IMediator {
 
     /**
      * Subscribes a listener that runs at most once.
-     * Does not receive {@link TMediatorEventOptions.stateful | stateful} replay on subscribe; only the next publish fires.
+     * Does not receive {@link TMediatorEventOptions.replayLast | replayLast} replay on subscribe; only the next publish fires.
      * @template T Payload type.
      * @param eventType Event factory from {@link defineEvent}.
      * @param listener Called on each publish; return value may forward another event or request.
@@ -285,8 +285,8 @@ export interface IMediator {
     getEventListenersCount(eventType: TMediatorEventType<any>): number;
 
     /**
-     * Removes all listeners for this event type. Does **not** clear stored stateful payload;
-     * use {@link clearState} for that.
+     * Removes all listeners for this event type. Does **not** clear stored payload for {@link TMediatorEventOptions.replayLast | replayLast};
+     * use {@link clearReplay} for that.
      *
      * @param eventType The event factory.
      * @returns Whether there were any listeners to remove.

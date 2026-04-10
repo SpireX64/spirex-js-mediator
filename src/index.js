@@ -79,7 +79,7 @@ export function createMediator() {
                 "Invalid event object. Events must be created using mediator event type.",
             );
         var type = event[$Type];
-        if (type.stateful) eventStateMap.set(type, event.payload);
+        if (type.replayLast) eventStateMap.set(type, event.payload);
 
         var listeners = eventListenersMap.get(type);
         if (!listeners || listeners.size == 0) return;
@@ -129,11 +129,11 @@ export function createMediator() {
         return eventListenersMap.delete(eventType);
     }
 
-    function clearState(eventType) {
+    function clearReplay(eventType) {
         return eventStateMap.delete(eventType);
     }
 
-    function on(eventType, listener, ignoreState = false) {
+    function on(eventType, listener, ignoreReplayLast = false) {
         if (typeof listener != "function")
             throw new TypeError("Invalid event listener. Expected a function.");
         var listeners = eventListenersMap.get(eventType);
@@ -142,7 +142,7 @@ export function createMediator() {
 
         listeners.add(listener);
 
-        if (eventType.stateful && !ignoreState) {
+        if (eventType.replayLast && !ignoreReplayLast) {
             var state = eventStateMap.get(eventType);
             if (state)
                 listener({ type: eventType, payload: state, mediator: this });
@@ -169,7 +169,7 @@ export function createMediator() {
     }
 
     var inst = {
-        clearState,
+        clearReplay,
         registerHandler,
         setEventHandler,
         getEventListenersCount,

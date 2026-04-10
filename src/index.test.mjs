@@ -103,10 +103,10 @@ describe("@spirex/mediator", () => {
             expect(eventType.name).toBe("eventUnnamed");
         });
 
-        test("WHEN: Define stateful event", () => {
-            var eventType = defineEvent({ stateful: true });
+        test("WHEN: Define replayLast event", () => {
+            var eventType = defineEvent({ replayLast: true });
 
-            expect(eventType.stateful).toBe(true);
+            expect(eventType.replayLast).toBe(true);
         });
 
         test("WHEN: Create event instance", () => {
@@ -142,7 +142,7 @@ describe("@spirex/mediator", () => {
             expect(typeof m.once).toBe("function");
             expect(typeof m.registerHandler).toBe("function");
             expect(typeof m.setEventHandler).toBe("function");
-            expect(typeof m.clearState).toBe("function");
+            expect(typeof m.clearReplay).toBe("function");
             expect(typeof m.getEventListenersCount).toBe("function");
             expect(typeof m.disposeEventListeners).toBe("function");
             expect(typeof m.build).toBe("function");
@@ -424,8 +424,8 @@ describe("@spirex/mediator", () => {
                 );
             });
 
-            test("WHEN: once ignores stateful replay", () => {
-                var eventType = defineEvent({ stateful: true });
+            test("WHEN: once ignores replayLast replay", () => {
+                var eventType = defineEvent({ replayLast: true });
                 var mediator = createMediator();
 
                 mediator.publish(eventType("first"));
@@ -436,8 +436,8 @@ describe("@spirex/mediator", () => {
                 expect(listener).not.toHaveBeenCalled();
             });
 
-            test("WHEN: stateful replay on on()", () => {
-                var eventType = defineEvent({ stateful: true });
+            test("WHEN: replayLast replay on on()", () => {
+                var eventType = defineEvent({ replayLast: true });
                 var mediator = createMediator();
 
                 mediator.publish(eventType("state"));
@@ -454,12 +454,12 @@ describe("@spirex/mediator", () => {
                 );
             });
 
-            test("WHEN: clearState removes replay", () => {
-                var eventType = defineEvent({ stateful: true });
+            test("WHEN: clearReplay removes stored payload", () => {
+                var eventType = defineEvent({ replayLast: true });
                 var mediator = createMediator();
 
                 mediator.publish(eventType("x"));
-                expect(mediator.clearState(eventType)).toBe(true);
+                expect(mediator.clearReplay(eventType)).toBe(true);
 
                 var listener = vi.fn();
                 mediator.on(eventType, listener);

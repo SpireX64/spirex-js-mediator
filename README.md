@@ -145,12 +145,12 @@ import { defineEvent } from "@spirex/mediator";
 const UserAuthorized = defineEvent<{ userId: string }>();
 ```
 
-You may pass options for a display **`name`** (used in tooling and consistency with requests) and **`stateful`** (see **Stateful events** below):
+You may pass options for a display **`name`** (used in tooling and consistency with requests) and **`replayLast`** (see **Replay last value** below):
 
 ```ts
 const ThemeChanged = defineEvent<{ theme: string }>({
     name: "ThemeChanged",
-    stateful: true,
+    replayLast: true,
 });
 ```
 
@@ -219,12 +219,12 @@ mediator.on(OrderPlaced, ({ payload }) =>
 );
 ```
 
-#### Stateful events
-Pass **`{ stateful: true }`** to **`defineEvent`**. Keeps the last published event for **replay to new subscribers** that event type. When a new subscriber is added with **`on()`**, they are invoked **synchronously** with that payload (same shape as a normal publish). Use **`clearState(eventType)`** to drop the stored payload. **`once()`** does **not** replay stored state; it only runs on the next **`publish`**.
+#### Replay last value (`replayLast`)
+Pass **`{ replayLast: true }`** to **`defineEvent`**. The mediator keeps the **last published payload** for that event type and **replays it to new `on()` subscribers** (synchronous delivery, same shape as a normal publish). Use **`clearReplay(eventType)`** to drop the stored payload. **`once()`** does **not** receive this replay; it only runs on the next **`publish`**.
 
 #### Inspecting and clearing listeners
 - **`getEventListenersCount(eventType)`** — number of listeners for an event type.
-- **`disposeEventListeners(eventType)`** — remove all listeners for that type. Stored stateful payload is **not** cleared; call **`clearState`** if needed.
+- **`disposeEventListeners(eventType)`** — remove all listeners for that type. The stored payload for **`replayLast`** events is **not** cleared; call **`clearReplay`** if needed.
 
 #### Event Listeners Execution Model
 - Event listeners can be synchronous or asynchronous;
@@ -234,7 +234,7 @@ This helps ensure that:
 - an error in one listener **does not** affect others;
 - an error **does not** propagate back to the event source.
 
-Use **`setEventHandler(handler)`** to observe listener errors (including **`Promise`** rejections from async listeners before forwarding). Errors during **synchronous stateful replay** on subscribe are **not** passed to this handler (see stateful section above).
+Use **`setEventHandler(handler)`** to observe listener errors (including **`Promise`** rejections from async listeners before forwarding). Errors during **synchronous `replayLast` replay** on subscribe are **not** passed to this handler (see **Replay last value** above).
 
 
 ### Mediator Requests
